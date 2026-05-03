@@ -1,0 +1,31 @@
+# auth_config.yaml.example
+#
+# Copy this file to auth_config.yaml (gitignored) and fill in real values.
+#
+#   cp auth_config.yaml.example auth_config.yaml
+#
+# Generate a bcrypt hash for any password:
+#   python3 -c "import bcrypt; print(bcrypt.hashpw(b'yourpassword', bcrypt.gensalt()).decode())"
+#
+# Set cookie.key to a random string (min 32 chars). You can use the same value
+# as your SECRET_KEY environment variable.
+
+credentials:
+  usernames:
+    yourname:
+      email: you@yourorg.com
+      name: Your Name
+      password: $2b$12$REPLACE_WITH_BCRYPT_HASH_OF_YOUR_PASSWORD
+    seconduser:
+      email: colleague@yourorg.com
+      name: Colleague Name
+      password: $2b$12$REPLACE_WITH_BCRYPT_HASH_OF_THEIR_PASSWORD
+
+cookie:
+  name: procureiq_auth
+  key: REPLACE_WITH_RANDOM_32_CHAR_STRING
+  expiry_days: 30
+
+preauthorized:
+  emails:
+    - you@yourorg.com

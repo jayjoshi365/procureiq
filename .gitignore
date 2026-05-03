@@ -1,0 +1,53 @@
+# ── Sensitive / secrets ───────────────────────────────────────────────
+.env
+.env.*
+auth_config.yaml
+*.key
+*.pem
+secrets/
+
+# ── Database files (SQLite — never commit evaluation data) ────────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ── Python ────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# ── Virtual environments ──────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── IDE / editor ──────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Streamlit ─────────────────────────────────────────────────────────
+.streamlit/secrets.toml
+
+# ── Audit / encrypted logs ────────────────────────────────────────────
+audit_log.enc
+audit_log*.enc
+
+# ── Logs / temp ───────────────────────────────────────────────────────
+*.log
+*.tmp
+*.bak
+pip-log.txt
+pip-delete-this-directory.txt
