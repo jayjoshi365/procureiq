@@ -5305,17 +5305,27 @@ def build_cfo_challenge(
     # Q3 — Evaluation rigour
     dim_count = sum(1 for d in DIMENSIONS if leader["Scores"].get(d, 50) != 50)
     completeness_pct = round(dim_count / len(DIMENSIONS) * 100)
+    if completeness_pct >= 40:
+        _completeness_clause = (
+            f"{dim_count} of {len(DIMENSIONS)} dimensions ({completeness_pct}%) were scored above the default midpoint, "
+            f"reflecting active assessor judgment."
+        )
+    else:
+        _completeness_clause = (
+            f"Only {dim_count} of {len(DIMENSIONS)} dimensions ({completeness_pct}%) were scored above the default midpoint — "
+            f"the evaluation is primarily price and financial health driven. "
+            f"Assessor should supplement dimension scores before presenting to senior stakeholders."
+        )
     challenges.append({
         "question": "How rigorous was the evaluation? Is this just a gut-feel score?",
         "answer": (
             f"The evaluation scored {len(DIMENSIONS)} weighted dimensions using the Kraljic {kraljic} weighting model. "
-            f"{dim_count} of {len(DIMENSIONS)} dimensions ({completeness_pct}%) were scored above the default midpoint, "
-            f"reflecting active assessor judgment. "
+            f"{_completeness_clause} "
             f"Weights are not arbitrary — they shift systematically based on {kraljic} posture "
             f"(e.g., {'SLA and execution risk carry highest weight' if kraljic == 'Strategic' else 'price and commercial flexibility carry highest weight' if kraljic == 'Leverage' else 'supply assurance carries highest weight'}). "
             f"Financial health ({fin_score}/100) is {'sourced from SEC EDGAR/XBRL annual filings' if 'SEC EDGAR' in fin_source else 'based on internal assessment — validate against audited financials before award'}."
         ),
-        "severity": "MEDIUM",
+        "severity": "MEDIUM" if completeness_pct >= 40 else "HIGH",
     })
 
     # Q4 — Runner-up alternative
@@ -5336,11 +5346,19 @@ def build_cfo_challenge(
     # Q5 — Switching cost / exit
     switching_q = next((q for q in intake_answers if "switch" in q.lower() or "exit" in q.lower()), None)
     switching_ans = intake_answers.get(switching_q, "") if switching_q else ""
-    switching_summary = switching_ans.split("—")[0].strip() if switching_ans else "Medium"
+    if switching_ans:
+        switching_summary = switching_ans.split("—")[0].strip()
+        switching_source = f"Switching cost assessed as: {switching_summary} (from intake)."
+    else:
+        switching_summary = "Medium"
+        switching_source = (
+            "Switching cost not captured in intake — classification defaults to Medium and is unvalidated. "
+            "Quantify against implementation cost, data portability terms, and re-onboarding timeline before award."
+        )
     challenges.append({
         "question": "If this supplier fails mid-contract, what's the exit cost?",
         "answer": (
-            f"Switching cost assessed as: {switching_summary}. "
+            f"{switching_source} "
             f"To de-risk: include a 90-day cure clause, data portability requirement, and step-in rights in the contract. "
             f"{'For a Strategic category, prioritize continuity over contract exit.' if kraljic == 'Strategic' else 'For a Leverage category, maintain at least one qualified alternate to keep exit credible.'}"
         ),
@@ -5348,10 +5366,15 @@ def build_cfo_challenge(
     })
 
     # Q6 — Market benchmark
+    _live_market = bool(os.environ.get("ALPHA_VANTAGE_API_KEY") or os.environ.get("NEWS_API_KEY"))
+    _market_data_qualifier = (
+        "live BLS PPI data" if _live_market
+        else "BLS PPI index data (static reference — configure Alpha Vantage API key for live pricing)"
+    )
     challenges.append({
         "question": "Have we benchmarked pricing against the market?",
         "answer": (
-            f"Market Intelligence tab shows live BLS PPI data for {category_rule.get('tag', 'this category')} "
+            f"Market Intelligence tab shows {_market_data_qualifier} for {category_rule.get('tag', 'this category')} "
             f"alongside market leader comparables. {leader['Supplier']}'s quote should be compared against "
             f"the BLS inflation index and ISM price trend for this sub-category. "
             f"If pricing is above benchmark, use the Negotiation tab to generate category-specific leverage points before award."
@@ -5365,7 +5388,7 @@ def build_cfo_challenge(
 def build_briefing_action_plan(kraljic: str, category_rule: Dict, weakest_dim: str, blocker_row, intake_answers: Dict[str, str]) -> List[str]:
     plan = [
         f"Focus the first 90 days on the highest-risk dimension: {weakest_dim}.",
-        "Translate the recommendation into a one-page decision memo for the executive sponsor.",
+        f"Obtain sign-off from the executive sponsor before contract execution — confirm they have reviewed the risk flags and financial health provenance.",
         "Lock the top negotiation priorities and contract protections before award.",
         "Confirm the recommendation narrative with the stakeholder team before the final meeting.",
     ]
@@ -5399,8 +5422,10 @@ def build_90day_action_plan(
     fin_health = leader.get("Financial Health", 70)
 
     # ── Phase 1: Day 1–30 Foundation ─────────────────────────
+    _weakest_score = leader["Scores"].get(weakest_dim, 50)
     p1 = [
-        f"Execute contract with {supplier} — lock {weakest_dim} gap clause and SLA penalty language before Day 5.",
+        f"{weakest_dim} scored {_weakest_score}/100 — the lowest of all evaluated dimensions. "
+        f"Execute contract with {supplier} and require a written remediation plan for this gap before Day 5.",
         "Issue internal award communication with one-page rationale memo to all stakeholders.",
         "Stand up governance model: monthly SLA review cadence, escalation path, and named supplier owner.",
     ]
@@ -5866,8 +5891,8 @@ def render_cover():
             <div style="font-family:'JetBrains Mono',monospace;font-size:0.5rem;letter-spacing:0.12em;text-transform:uppercase;color:#B0C4DC;margin-top:0.15rem">Workflow Tabs</div>
         </div>
         <div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:1.35rem;font-weight:700;color:#60A5FA;line-height:1">AI</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:0.5rem;letter-spacing:0.12em;text-transform:uppercase;color:#B0C4DC;margin-top:0.15rem">Powered</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:1.35rem;font-weight:700;color:#60A5FA;line-height:1">SEC</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.5rem;letter-spacing:0.12em;text-transform:uppercase;color:#B0C4DC;margin-top:0.15rem">EDGAR</div>
         </div>
     </div>
 </div>
@@ -8548,6 +8573,14 @@ ProcureIQ uses an 8-dimension weighted scoring model based on the Kraljic matrix
                         'border-radius:8px;padding:0.6rem 0.9rem;font-size:0.82rem;color:#FCA5A5;margin:0.4rem 0">'
                         '⚠ No SEC EDGAR financial data available for this ticker — '
                         'manual assessment required.</div>',
+                        unsafe_allow_html=True,
+                    )
+                elif ticker.strip() and sec_context and sec_context.get("found") and _edgar_fin_result is None:
+                    st.markdown(
+                        '<div style="background:rgba(252,211,77,0.06);border:1px solid rgba(252,211,77,0.18);'
+                        'border-radius:8px;padding:0.6rem 0.9rem;font-size:0.82rem;color:#FCD34D;margin:0.4rem 0">'
+                        '⚠ EDGAR lookup attempted — XBRL financial data unavailable for this ticker. '
+                        'Score reflects manual inputs. Validate against audited financials before award.</div>',
                         unsafe_allow_html=True,
                     )
                 elif not ticker.strip():

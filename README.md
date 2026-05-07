@@ -1,8 +1,8 @@
 # ProcureIQ
 
-A portfolio-grade procurement decision support tool built with Python and Streamlit. ProcureIQ structures the pre-award sourcing process: intake, market intelligence, supplier evaluation, stakeholder analysis, and executive-ready outputs — all in one workflow.
+Procurement decision engine that scores suppliers across 10 weighted dimensions, verifies financial health from SEC EDGAR/XBRL, and produces a CFO-ready Decision Brief with structured risk flags and an auditable scoring trail.
 
-> **Positioning:** This is a decision support tool, not an enterprise procurement suite. It is not a replacement for SAP Ariba, Coupa, Ivalua, or Jaggaer. It is designed to complement them by accelerating the judgment-intensive work that those platforms do not do well.
+ProcureIQ structures the pre-award sourcing process from intake through executive recommendation. Suppliers are scored across 10 weighted dimensions — price is sigmoid-normalised to prevent outlier collapse, financial health is pulled from SEC EDGAR/XBRL for public companies, and the output is a Decision Brief with CFO challenge Q&A, EDGAR freshness gating, and a 90-day execution plan. Built to demonstrate what AI-assisted procurement looks like when it's auditable, not just impressive.
 
 ---
 
@@ -12,19 +12,9 @@ A portfolio-grade procurement decision support tool built with Python and Stream
 - **Supplier evaluation** — 10-dimensional weighted scoring across Price/TCO, SLA, Execution Risk, Strategic Alignment, ESG, Supplier Diversity, and more; financial health auto-populated from SEC EDGAR/XBRL for public companies; CSV import to pre-populate up to 20 supplier slots
 - **Market intelligence** — Subcategory-specific market context; live data via Alpha Vantage and SEC EDGAR when API keys are configured
 - **Stakeholder analysis** — Power/interest mapping, position tracking, talk-track coaching per stakeholder
-- **Decision Brief** — Executive summary, CFO challenge Q&A, risk flags, 90-day action plan, and confidence score
-- **Portfolio dashboard** — Cross-event view of saved evaluations with Kraljic distribution and category breakdown
+- **Decision Brief** — Executive summary, CFO challenge Q&A, risk flags, 90-day action plan, confidence score, and Evidence & Assumptions audit trail
+- **Portfolio dashboard** — Cross-event view of saved evaluations with Kraljic distribution, category breakdown, and data provenance risk heat map
 - **Exports** — Excel and HTML one-pager for offline sharing
-
----
-
-## What ProcureIQ Is Not
-
-- **Not an ERP connector** — No live SAP, Coupa, or Oracle integration. Spend data is entered manually or via Excel upload.
-- **Not a compliance tool** — Sanctions screening is illustrative. Do not use for actual OFAC/SAM.gov screening without a certified data source.
-- **Not legal advice** — Recommendations, risk flags, and contract language suggestions are informational only.
-- **Not production-ready** — SQLite backend, single-process architecture, no multi-tenancy. Built for portfolio demonstration and personal use.
-- **Not a certified AI system** — LLM outputs require human review. Financial health scores for public companies are derived from SEC EDGAR/XBRL filings; for private companies they reflect qualitative user inputs, not audited financials.
 
 ---
 
@@ -33,9 +23,9 @@ A portfolio-grade procurement decision support tool built with Python and Stream
 ### Supplier Evaluation
 - 10-dimension weighted scoring (configurable by Kraljic position and subcategory)
 - Financial health score from SEC EDGAR/XBRL for public companies; qualitative signals for private
-- CSV import to pre-populate supplier name, ticker, price, and financial fields (up to 20 suppliers)
+- Sigmoid price normalisation (k=4) — prevents outlier collapse in competitive bids
+- CSV import to pre-populate supplier name, ticker, price, financial fields, and all 9 dimension scores (up to 20 suppliers)
 - Sensitivity analysis and confidence scoring
-- Radar and bar chart visualization
 
 ### Market Intelligence
 - 15 procurement categories, 179 subcategories with default Kraljic postures
@@ -51,7 +41,9 @@ A portfolio-grade procurement decision support tool built with Python and Stream
 
 ### Decision Brief
 - Executive summary with Kraljic framing
-- CFO-ready challenge Q&A
+- CFO-ready challenge Q&A with EDGAR-backed financial provenance
+- EDGAR staleness gate — amber (12–18 months) and stale (>18 months) acknowledgment required before brief renders
+- Evidence & Assumptions section — data sources, scoring assumptions, and pre-award validation flags
 - Risk flags (HIGH / MEDIUM / LOW tiers)
 - 90-day action plan
 - Score confidence label
@@ -70,7 +62,7 @@ A portfolio-grade procurement decision support tool built with Python and Stream
 
 ```
 ProcureIQ/
-├── app.py                    # Main Streamlit application (~13,000 lines; monolith by design for portfolio)
+├── app.py                    # Main Streamlit application (~13,500 lines)
 ├── auth.py                   # Streamlit login gate (custom bcrypt form, no third-party auth library)
 ├── auth_config.yaml.example  # Credential template — copy to auth_config.yaml (gitignored) and fill in
 ├── database.py               # SQLite with WAL mode, session management, discovery cache
@@ -83,7 +75,7 @@ ProcureIQ/
 ├── security.py               # Auth utilities (JWT, hashing, audit logger)
 ├── rfp.py                    # RFP question templates
 ├── utils.py                  # Helper functions
-└── tests/                    # 130 unit tests
+└── tests/                    # 150 unit tests
 ```
 
 **Database:** SQLite (WAL mode). Suitable for single-user and demo use. Not suitable for concurrent multi-user production deployment.
@@ -108,14 +100,13 @@ ProcureIQ/
 3. **Configure authentication** (required — the app will not start without credentials)
    ```bash
    cp auth_config.yaml.example auth_config.yaml
-   # Edit auth_config.yaml — set real bcrypt-hashed passwords, then restart.
+   # Edit auth_config.yaml — set bcrypt-hashed passwords, then restart.
    # See auth_config.yaml.example for instructions on generating bcrypt hashes.
    ```
    Alternatively, use environment variables (useful for hosted deployments):
    ```bash
    export PROCUREIQ_DEMO_USER=demo
    export PROCUREIQ_DEMO_PASS=$(python3 -c "import bcrypt; print(bcrypt.hashpw(b'yourpassword', bcrypt.gensalt()).decode())")
-   export PROCUREIQ_COOKIE_KEY="some-random-32-char-string"
    ```
 
 4. **Configure API keys** (all optional — app runs without them)
@@ -162,20 +153,19 @@ The app is fully usable without any API keys. When no Anthropic key is configure
 python -m pytest tests/ -q
 ```
 
-130 tests covering evaluation logic, financial health scoring (qualitative + EDGAR/XBRL paths), CFO challenge generation, risk flag logic, executive summary construction, and CSV supplier import.
+150 tests covering evaluation logic, financial health scoring (qualitative + EDGAR/XBRL paths), CFO challenge generation, risk flag logic, executive summary construction, live scoring functions, EDGAR staleness handling, and CSV supplier import.
 
 ---
 
-## Limitations
+## What ProcureIQ Is Not
 
-See [LIMITATIONS.md](LIMITATIONS.md) for a full list. Key limitations:
+- **Not an ERP connector** — No live SAP, Coupa, or Oracle integration. Spend data is entered manually or via CSV import.
+- **Not a compliance tool** — Sanctions screening is illustrative. Do not use for actual OFAC/SAM.gov screening without a certified data source.
+- **Not legal advice** — Recommendations, risk flags, and contract language suggestions are informational only.
+- **Not production-ready** — SQLite backend, single-process architecture, no multi-tenancy. Built for single-user use and demonstration.
+- **Not a certified AI system** — LLM outputs require human review. Financial health scores for public companies are derived from SEC EDGAR/XBRL filings; for private companies they reflect qualitative user inputs, not audited financials.
 
-- SQLite — not suitable for concurrent multi-user use
-- No live ERP data — spend and supplier data entered manually
-- Fallback market data is illustrative, not real-time research
-- LLM outputs are not validated against external sources
-- Financial health scores for public companies are sourced from SEC EDGAR/XBRL; private companies require manual qualitative input — neither is a substitute for credit checks or audited financials
-- Sanctions screening is a stub — not a replacement for certified compliance tooling
+See [LIMITATIONS.md](LIMITATIONS.md) for the full limitations list.
 
 ---
 
