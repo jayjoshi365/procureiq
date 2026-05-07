@@ -8828,6 +8828,37 @@ ProcureIQ uses an 8-dimension weighted scoring model based on the Kraljic matrix
                 st.rerun()
         _show_brief = not _gate_needed or _gate_acked
         if _show_brief:
+            # ── Executive Defensibility Score ────────────────────
+            # Compute before hero strip so it can appear in KPI row.
+            # Fully deterministic — 6 components, 100 pts total.
+            _eds_rf        = generate_rfp_risk_flags(leader, runner_up, blocker, kraljic, category_rule)
+            _eds_high      = sum(1 for _f in _eds_rf if _f["tier"] == "HIGH")
+            # 1. Completeness (20)
+            _eds_comp      = 20 if _completeness >= 80 else 15 if _completeness >= 60 else 10 if _completeness >= 40 else 5
+            # 2. Score gap (20)
+            _eds_gap_pts   = (12 if runner_up is None else
+                              20 if _br_gap >= 10 else
+                              15 if _br_gap >= 5  else
+                              10 if _br_gap >= 2  else 5)
+            # 3. Risk profile (20)
+            _eds_risk_pts  = 20 if _eds_high == 0 else 12 if _eds_high == 1 else 5
+            # 4. Financial data quality (15)
+            _eds_fin_pts   = (15 if ("EDGAR" in _gate_source and not _gate_needed) else
+                              10 if ("EDGAR" in _gate_source and _gate_tier == "AMBER") else
+                               5 if ("EDGAR" in _gate_source and _gate_tier == "STALE") else 8)
+            # 5. Stakeholder alignment (15)
+            _has_champion  = (not stake_df.empty and not stake_df[stake_df["Position"] == "Champion"].empty)
+            _eds_stake_pts = 15 if (blocker is None and _has_champion) else 10 if blocker is None else 5
+            # 6. Weakest dimension (10)
+            _weakest_s     = leader["Scores"].get(leader_weakest_dim, 50)
+            _eds_weak_pts  = (10 if _weakest_s >= 70 else 8 if _weakest_s >= 60 else
+                               6 if _weakest_s >= 50 else 3 if _weakest_s >= 40 else 1)
+            _eds           = _eds_comp + _eds_gap_pts + _eds_risk_pts + _eds_fin_pts + _eds_stake_pts + _eds_weak_pts
+            _eds_label     = ("Defensible" if _eds >= 85 else "Solid" if _eds >= 70 else
+                              "Needs Work" if _eds >= 55 else "Vulnerable")
+            _eds_color     = ("#4ADE80" if _eds >= 85 else "#60A5FA" if _eds >= 70 else
+                              "#FCD34D" if _eds >= 55 else "#F87171")
+
             # ── Hero strip — full-width decision summary ──────────
             _hero_gap_block = (
                 f'<div style="text-align:center">'
@@ -8853,7 +8884,7 @@ ProcureIQ uses an 8-dimension weighted scoring model based on the Kraljic matrix
                 f'<div style="font-size:0.72rem;color:#64748B;font-family:monospace">CI {_br_ci_lo}–{_br_ci_hi}</div>'
                 f'</div>'
                 # KPI strip
-                f'<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0.8rem">'
+                f'<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:0.8rem">'
                 f'<div style="text-align:center">'
                 f'<div style="font-size:0.65rem;color:#A8BEDC;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.2rem">Posture</div>'
                 f'<div style="font-size:0.88rem;font-weight:700;color:{"#F87171" if kraljic=="Strategic" else "#4ADE80" if kraljic=="Leverage" else "#FCD34D"}">{html.escape(kraljic)}</div>'
@@ -8869,6 +8900,11 @@ ProcureIQ uses an 8-dimension weighted scoring model based on the Kraljic matrix
                 f'<div style="font-size:0.65rem;color:#64748B">{_completeness:.0f}% dims scored</div>'
                 f'</div>'
                 + _hero_gap_block +
+                f'<div style="text-align:center">'
+                f'<div style="font-size:0.65rem;color:#A8BEDC;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.2rem">Exec. Defensibility</div>'
+                f'<div style="font-size:1.5rem;font-weight:800;color:{_eds_color};font-family:monospace">{_eds}</div>'
+                f'<div style="font-size:0.65rem;color:{_eds_color}">{_eds_label}</div>'
+                f'</div>'
                 f'<div style="text-align:center">'
                 f'<div style="font-size:0.65rem;color:#A8BEDC;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.2rem">Watch Dim.</div>'
                 f'<div style="font-size:0.75rem;font-weight:700;color:#FCD34D">{html.escape(leader_weakest_dim.split("/")[0].strip())}</div>'
@@ -8926,6 +8962,56 @@ ProcureIQ uses an 8-dimension weighted scoring model based on the Kraljic matrix
                 f'<div style="font-family:var(--mono);font-size:0.78rem;letter-spacing:0.2em;text-transform:uppercase;'
                 f'color:#A8BEDC;margin-bottom:0.7rem">Dimension Breakdown — {html.escape(leader["Supplier"])}</div>'
                 f'{_dim_bars_html}'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+            # ── Executive Defensibility Score breakdown ──────────
+            _eds_rows = [
+                ("Evaluation Completeness", _eds_comp,  20, f"{_completeness:.0f}% of dimensions scored"),
+                ("Score Gap vs Runner-Up",  _eds_gap_pts, 20,
+                 f"+{_br_gap} pts vs {runner_up['Supplier']}" if runner_up else "Uncontested — only supplier evaluated"),
+                ("Risk Profile",            _eds_risk_pts, 20,
+                 f"{_eds_high} HIGH-tier risk flag{'s' if _eds_high != 1 else ''}" if _eds_high else "No HIGH-tier risk flags"),
+                ("Financial Data Quality",  _eds_fin_pts,  15,
+                 ("SEC EDGAR/XBRL — fresh" if ("EDGAR" in _gate_source and not _gate_needed)
+                  else f"SEC EDGAR/XBRL — {_gate_tier.lower()} ({int(_gate_age_months)}mo old)" if "EDGAR" in _gate_source
+                  else "Qualitative (no ticker / no EDGAR data)")),
+                ("Stakeholder Alignment",   _eds_stake_pts, 15,
+                 ("Champion present, no blocker"  if (blocker is None and _has_champion)
+                  else "No blocker, no champion assigned" if blocker is None
+                  else f"Blocker: {blocker['Name']} ({blocker['Position']})")),
+                ("Weakest Dimension Floor", _eds_weak_pts, 10,
+                 f"{leader_weakest_dim} — scored {_weakest_s:.0f}/100"),
+            ]
+            _eds_rows_html = ""
+            for _er_label, _er_val, _er_max, _er_note in _eds_rows:
+                _er_pct  = round(_er_val / _er_max * 100)
+                _er_c    = "#4ADE80" if _er_pct >= 75 else "#FCD34D" if _er_pct >= 50 else "#F87171"
+                _eds_rows_html += (
+                    f'<div style="display:grid;grid-template-columns:1fr 2fr 3rem;gap:0.6rem;'
+                    f'align-items:center;margin-bottom:0.45rem">'
+                    f'<div style="font-size:0.75rem;color:#C4D3E8">{html.escape(_er_label)}</div>'
+                    f'<div style="background:rgba(255,255,255,0.05);border-radius:4px;height:6px;overflow:hidden">'
+                    f'<div style="background:{_er_c};height:100%;width:{_er_pct}%;border-radius:4px"></div></div>'
+                    f'<div style="font-family:monospace;font-size:0.75rem;color:{_er_c};text-align:right">'
+                    f'{_er_val}/{_er_max}</div>'
+                    f'</div>'
+                    f'<div style="font-size:0.7rem;color:#64748B;margin-bottom:0.6rem;padding-left:0">{html.escape(_er_note)}</div>'
+                )
+            st.markdown(
+                f'<div style="background:#060D1A;border:1px solid rgba(96,165,250,0.12);'
+                f'border-top:2px solid {_eds_color};border-radius:0 0 10px 10px;'
+                f'padding:0.9rem 1.1rem;margin-bottom:1rem">'
+                f'<div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:0.7rem">'
+                f'<div style="font-family:monospace;font-size:0.62rem;color:#A8BEDC;'
+                f'text-transform:uppercase;letter-spacing:0.15em">Executive Defensibility Score</div>'
+                f'<div style="font-family:monospace;font-size:1.1rem;font-weight:800;color:{_eds_color}">{_eds}/100</div>'
+                f'<div style="font-family:monospace;font-size:0.62rem;color:{_eds_color};'
+                f'border:1px solid {_eds_color}44;border-radius:4px;padding:0.05rem 0.4rem;'
+                f'letter-spacing:0.1em">{_eds_label.upper()}</div>'
+                f'</div>'
+                f'{_eds_rows_html}'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -9053,7 +9139,7 @@ ProcureIQ uses an 8-dimension weighted scoring model based on the Kraljic matrix
             # ── Risk Flags ──────────────────────────────────────
             st.markdown("---")
             st.markdown("#### Live Risk Flags")
-            risk_flags = generate_rfp_risk_flags(leader, runner_up, blocker, kraljic, category_rule)
+            risk_flags = _eds_rf
             for flag in risk_flags:
                 tier_colors = {"HIGH": "#F87171", "MEDIUM": "#FCD34D", "HIDDEN": "#A78BFA"}
                 color = tier_colors.get(flag["tier"], "#60A5FA")
