@@ -9068,6 +9068,56 @@ ProcureIQ uses an 8-dimension weighted scoring model based on the Kraljic matrix
                     unsafe_allow_html=True,
                 )
 
+            # ── Why Not Selected ─────────────────────────────────
+            if len(ranked) > 1:
+                st.markdown("---")
+                st.markdown("#### Why Other Suppliers Were Not Selected")
+                st.markdown(
+                    '<p class="muted">For each supplier not recommended, the primary gaps '
+                    'that separated them from the award decision.</p>',
+                    unsafe_allow_html=True,
+                )
+                for _ns in ranked[1:]:
+                    _ns_name  = _ns["Supplier"]
+                    _ns_score = _ns["Weighted Score"]
+                    _ns_gap   = round(leader["Weighted Score"] - _ns_score, 1)
+                    _ns_price = _ns.get("Raw Price", 0)
+                    _ld_price = leader.get("Raw Price", 0)
+                    if _ld_price and _ns_price:
+                        _price_delta_pct = round((_ns_price - _ld_price) / _ld_price * 100, 1)
+                        if _price_delta_pct < -2:
+                            _price_story = f"{abs(_price_delta_pct)}% cheaper than {leader['Supplier']} (${_ns_price:,.0f} vs ${_ld_price:,.0f}) — but scored {_ns_gap} pts lower overall."
+                        elif _price_delta_pct > 2:
+                            _price_story = f"{_price_delta_pct}% more expensive than {leader['Supplier']} (${_ns_price:,.0f} vs ${_ld_price:,.0f}) with a lower score."
+                        else:
+                            _price_story = f"Comparable price to {leader['Supplier']} (${_ns_price:,.0f}), scored {_ns_gap} pts lower."
+                    else:
+                        _price_story = f"Scored {_ns_gap} pts below {leader['Supplier']}."
+                    _worst_dim = min(DIMENSIONS, key=lambda d: _ns["Scores"].get(d, 50) - leader["Scores"].get(d, 50))
+                    _worst_gap = round(leader["Scores"].get(_worst_dim, 50) - _ns["Scores"].get(_worst_dim, 50), 1)
+                    _notes_key = f"_piq_notes_{_ns_name.lower().replace(' ', '_')}"
+                    _eval_note = st.session_state.get(_notes_key, "").strip()
+                    st.markdown(
+                        f'<div style="background:#060D1A;border-left:4px solid #F87171;'
+                        f'border-radius:0 10px 10px 0;padding:0.9rem 1.1rem;margin-bottom:0.7rem">'
+                        f'<div style="display:flex;align-items:center;gap:0.8rem;margin-bottom:0.5rem">'
+                        f'<span style="font-weight:700;font-size:0.95rem;color:#F1F5F9">{html.escape(_ns_name)}</span>'
+                        f'<span style="font-family:monospace;font-size:0.58rem;color:#F87171;border:1px solid rgba(248,113,113,0.35);'
+                        f'border-radius:4px;padding:0.07rem 0.4rem;letter-spacing:0.1em">NOT SELECTED</span>'
+                        f'<span style="font-family:monospace;font-size:0.65rem;color:#94A3B8">Score {_ns_score}/100 '
+                        f'(−{_ns_gap} vs {html.escape(leader["Supplier"])})</span>'
+                        f'</div>'
+                        f'<div style="font-size:0.82rem;color:#C4D3E8;margin-bottom:0.35rem">● {html.escape(_price_story)}</div>'
+                        f'<div style="font-size:0.82rem;color:#C4D3E8;margin-bottom:0.35rem">'
+                        f'● Largest dimension gap: <strong style="color:#FCD34D">{html.escape(_worst_dim)}</strong> '
+                        f'(scored {_ns["Scores"].get(_worst_dim, 50):.0f} vs {leader["Scores"].get(_worst_dim, 50):.0f} for {html.escape(leader["Supplier"])}, '
+                        f'−{_worst_gap:.0f} pts).</div>'
+                        + (f'<div style="font-size:0.82rem;color:#94A3B8;margin-top:0.3rem;border-top:1px solid rgba(255,255,255,0.05);padding-top:0.35rem">'
+                           f'Evaluator note: {html.escape(_eval_note)}</div>' if _eval_note else '')
+                        + f'</div>',
+                        unsafe_allow_html=True,
+                    )
+
             # ── Stakeholder Snapshot ─────────────────────────────
             st.markdown("---")
             st.markdown("#### Stakeholder Snapshot")
@@ -9215,6 +9265,56 @@ ProcureIQ uses an 8-dimension weighted scoring model based on the Kraljic matrix
                     'border-radius:8px;padding:0.6rem 0.9rem;font-size:0.82rem;color:#93C5FD">'
                     'Set an AI key in the AI Settings panel above to also generate a polished AI-written CFO narrative paragraph.'
                     '</div>',
+                    unsafe_allow_html=True,
+                )
+
+            # ── Conditions of Award ──────────────────────────────
+            st.markdown("---")
+            st.markdown("#### Conditions of Award")
+            st.markdown(
+                '<p class="muted">Required actions before this supplier award can be executed. '
+                'Derived from risk flags, stakeholder position, financial data recency, '
+                'and score confidence. Each item must be resolved or formally accepted.</p>',
+                unsafe_allow_html=True,
+            )
+            _coa_items = []
+            _coa_items.append(("REQUIRED", "Complete legal review and contract execution with qualified counsel."))
+            for _rf in risk_flags:
+                if _rf["tier"] == "HIGH":
+                    _coa_items.append(("REQUIRED", f"Resolve high-risk flag: {_rf['title']} — {_rf['body']}"))
+            if blocker is not None:
+                _coa_items.append(("REQUIRED", f"Secure endorsement from {blocker['Name']} ({blocker['Role']}) before award. "
+                                   f"Current position: {blocker['Position']}."))
+            if _gate_needed:
+                _age_str = f"{int(_gate_age_months)} months"
+                _coa_items.append(("REQUIRED", f"Obtain current credit report or D&B for {leader['Supplier']} — "
+                                   f"EDGAR data is {_age_str} old. Do not rely on the Financial Health score without verification."))
+            _weakest_score = leader["Scores"].get(leader_weakest_dim, 50)
+            if _weakest_score < 55:
+                _coa_items.append(("REQUIRED", f"Negotiate contractual protections for {leader_weakest_dim} "
+                                   f"(scored {_weakest_score:.0f}/100 — lowest dimension). "
+                                   "Include SLA penalties or remediation clauses before award."))
+            if _br_gap is not None and _br_gap < 5:
+                _coa_items.append(("REQUIRED", f"Document narrow-gap rationale. Score gap vs {runner_up['Supplier']} "
+                                   f"is {_br_gap} pts — within a single-dimension challenge range. "
+                                   "Record the tiebreaker logic before the award meeting."))
+            _coa_items.append(("STANDARD", f"Complete reference check with at least two {leader['Supplier']} "
+                               "enterprise customers in this category."))
+            _coa_items.append(("STANDARD", "Conduct vendor security assessment per your organization's InfoSec policy."))
+            _req_color  = "#F87171"
+            _std_color  = "#60A5FA"
+            for _tier, _text in _coa_items:
+                _cc = _req_color if _tier == "REQUIRED" else _std_color
+                _cbg = "rgba(248,113,113,0.05)" if _tier == "REQUIRED" else "rgba(96,165,250,0.04)"
+                st.markdown(
+                    f'<div style="background:{_cbg};border-left:3px solid {_cc};'
+                    f'border-radius:0 8px 8px 0;padding:0.55rem 0.9rem;margin-bottom:0.4rem;'
+                    f'display:flex;gap:0.7rem;align-items:flex-start">'
+                    f'<span style="font-family:monospace;font-size:0.58rem;color:{_cc};'
+                    f'border:1px solid {_cc}33;border-radius:3px;padding:0.07rem 0.35rem;'
+                    f'letter-spacing:0.1em;white-space:nowrap;margin-top:0.1rem">{_tier}</span>'
+                    f'<span style="font-size:0.82rem;color:#C4D3E8;line-height:1.5">{html.escape(_text)}</span>'
+                    f'</div>',
                     unsafe_allow_html=True,
                 )
 
