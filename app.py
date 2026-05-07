@@ -7033,7 +7033,14 @@ def render_dashboard():
 
         _pf_col1, _pf_col2 = st.columns([1, 2])
         with _pf_col1:
-            if st.button("💾 Save Event to Portfolio", key="save_portfolio_btn",
+            if st.session_state.get("_piq_demo_active"):
+                st.markdown(
+                    '<div style="background:rgba(252,211,77,0.06);border-left:3px solid #FCD34D;'
+                    'border-radius:0 6px 6px 0;padding:0.45rem 0.7rem;font-size:0.78rem;color:#FCD34D">'
+                    'Save disabled in demo mode.</div>',
+                    unsafe_allow_html=True,
+                )
+            elif st.button("💾 Save Event to Portfolio", key="save_portfolio_btn",
                          help="Saves a snapshot of the current evaluation state to your portfolio history."):
                 try:
                     _db = get_database()
@@ -7065,40 +7072,48 @@ def render_dashboard():
 
         # Show portfolio history from DB
         with _pf_col2:
-            try:
-                _db = get_database()
-                _all_config = {r["key"]: r["value"] for r in _db.get_portfolio_events(limit=8)}
+            if st.session_state.get("_piq_demo_active"):
+                st.markdown(
+                    '<div style="background:rgba(252,211,77,0.06);border-left:3px solid #FCD34D;'
+                    'border-radius:0 6px 6px 0;padding:0.45rem 0.7rem;font-size:0.78rem;color:#FCD34D">'
+                    'Portfolio history not available in demo mode.</div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                try:
+                    _db = get_database()
+                    _all_config = {r["key"]: r["value"] for r in _db.get_portfolio_events(limit=8)}
 
-                if _all_config:
-                    st.markdown(
-                        '<div style="font-size:0.82rem;color:#D0E0EF;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.4rem">Recent Portfolio Events</div>',
-                        unsafe_allow_html=True,
-                    )
-                    for _pk, _pv in list(_all_config.items())[:5]:
-                        _pname = html.escape(str(_pv.get("event_name", "Untitled")))
-                        _pcat  = html.escape(str(_pv.get("category", "—")))
-                        _pkq   = html.escape(str(_pv.get("kraljic", "—")))
-                        _prec  = html.escape(str(_pv.get("recommendation", "—")))
-                        _psc   = _pv.get("score")
-                        _pid   = html.escape(str(_pv.get("event_id", _pk)))
-                        _pkc   = _kq_colors.get(_pv.get("kraljic", ""), "#94A3B8")
+                    if _all_config:
                         st.markdown(
-                            f'<div style="display:flex;align-items:center;gap:0.6rem;background:#060D1A;border:1px solid rgba(148,163,184,0.1);'
-                            f'border-radius:8px;padding:0.5rem 0.8rem;margin-bottom:0.3rem">'
-                            f'<div style="width:8px;height:8px;border-radius:50%;background:{_pkc};flex-shrink:0"></div>'
-                            f'<div style="flex:1;min-width:0">'
-                            f'<span style="font-weight:600;font-size:0.82rem;color:#E2E8F0">{_pname}</span>'
-                            f'<span style="font-size:0.85rem;color:#D0E0EF;margin-left:0.5rem">{_pcat} · {_pkq}</span><br/>'
-                            f'<span style="font-size:0.85rem;color:#C4D3E8">Rec: {_prec}</span>'
-                            f'</div>'
-                            f'<div style="font-size:0.9rem;font-weight:700;color:#60A5FA">{f"{_psc}/100" if _psc else "—"}</div>'
-                            f'</div>',
+                            '<div style="font-size:0.82rem;color:#D0E0EF;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.4rem">Recent Portfolio Events</div>',
                             unsafe_allow_html=True,
                         )
-                else:
-                    st.caption("No saved events yet. Use 'Save Event to Portfolio' to track multiple sourcing events.")
-            except Exception:
-                st.caption("Portfolio history unavailable.")
+                        for _pk, _pv in list(_all_config.items())[:5]:
+                            _pname = html.escape(str(_pv.get("event_name", "Untitled")))
+                            _pcat  = html.escape(str(_pv.get("category", "—")))
+                            _pkq   = html.escape(str(_pv.get("kraljic", "—")))
+                            _prec  = html.escape(str(_pv.get("recommendation", "—")))
+                            _psc   = _pv.get("score")
+                            _pid   = html.escape(str(_pv.get("event_id", _pk)))
+                            _pkc   = _kq_colors.get(_pv.get("kraljic", ""), "#94A3B8")
+                            st.markdown(
+                                f'<div style="display:flex;align-items:center;gap:0.6rem;background:#060D1A;border:1px solid rgba(148,163,184,0.1);'
+                                f'border-radius:8px;padding:0.5rem 0.8rem;margin-bottom:0.3rem">'
+                                f'<div style="width:8px;height:8px;border-radius:50%;background:{_pkc};flex-shrink:0"></div>'
+                                f'<div style="flex:1;min-width:0">'
+                                f'<span style="font-weight:600;font-size:0.82rem;color:#E2E8F0">{_pname}</span>'
+                                f'<span style="font-size:0.85rem;color:#D0E0EF;margin-left:0.5rem">{_pcat} · {_pkq}</span><br/>'
+                                f'<span style="font-size:0.85rem;color:#C4D3E8">Rec: {_prec}</span>'
+                                f'</div>'
+                                f'<div style="font-size:0.9rem;font-weight:700;color:#60A5FA">{f"{_psc}/100" if _psc else "—"}</div>'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
+                    else:
+                        st.caption("No saved events yet. Use 'Save Event to Portfolio' to track multiple sourcing events.")
+                except Exception:
+                    st.caption("Portfolio history unavailable.")
 
         # ── SESSION PERSISTENCE ───────────────────────────────────────
         st.markdown("---")
@@ -7144,46 +7159,54 @@ def render_dashboard():
 
         with _sess_col2:
             # List recent saved sessions
-            try:
-                import datetime as _dt_s
-                _sess_raw = get_database().get_session_snapshots(limit=6)
-                _sess_rows = [(_r["key"], _r["value"]) for _r in _sess_raw]
+            if st.session_state.get("_piq_demo_active"):
+                st.markdown(
+                    '<div style="background:rgba(252,211,77,0.06);border-left:3px solid #FCD34D;'
+                    'border-radius:0 6px 6px 0;padding:0.45rem 0.7rem;font-size:0.78rem;color:#FCD34D">'
+                    'Saved sessions not available in demo mode.</div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                try:
+                    import datetime as _dt_s
+                    _sess_raw = get_database().get_session_snapshots(limit=6)
+                    _sess_rows = [(_r["key"], _r["value"]) for _r in _sess_raw]
 
-                if _sess_rows:
-                    st.markdown(
-                        '<div style="font-size:0.78rem;color:#D0E0EF;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.5rem">Saved Sessions</div>',
-                        unsafe_allow_html=True,
-                    )
-                    for _srow in _sess_rows:
-                        _smeta = _srow[1] if isinstance(_srow[1], dict) else {}
-                        _slabel   = html.escape(str(_smeta.get("label", "Untitled")))
-                        _scat     = html.escape(str(_smeta.get("category", "—")))
-                        _srec     = html.escape(str(_smeta.get("recommendation", "—")))
-                        _ssid     = str(_smeta.get("session_id", _srow[0].replace("session_snap_", "")))
-                        _sts = _smeta.get("saved_at", 0)
-                        _sdate = _dt_s.datetime.fromtimestamp(_sts).strftime("%b %d %H:%M") if _sts else "—"
+                    if _sess_rows:
+                        st.markdown(
+                            '<div style="font-size:0.78rem;color:#D0E0EF;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.5rem">Saved Sessions</div>',
+                            unsafe_allow_html=True,
+                        )
+                        for _srow in _sess_rows:
+                            _smeta = _srow[1] if isinstance(_srow[1], dict) else {}
+                            _slabel   = html.escape(str(_smeta.get("label", "Untitled")))
+                            _scat     = html.escape(str(_smeta.get("category", "—")))
+                            _srec     = html.escape(str(_smeta.get("recommendation", "—")))
+                            _ssid     = str(_smeta.get("session_id", _srow[0].replace("session_snap_", "")))
+                            _sts = _smeta.get("saved_at", 0)
+                            _sdate = _dt_s.datetime.fromtimestamp(_sts).strftime("%b %d %H:%M") if _sts else "—"
 
-                        _r1, _r2 = st.columns([3, 1])
-                        with _r1:
-                            st.markdown(
-                                f'<div style="background:#060D1A;border:1px solid rgba(148,163,184,0.1);'
-                                f'border-radius:8px;padding:0.45rem 0.75rem;margin-bottom:0.25rem">'
-                                f'<span style="font-weight:600;font-size:0.85rem;color:#E2E8F0">{_slabel}</span> '
-                                f'<span style="font-size:0.78rem;color:#94A3B8">{_scat} · {_sdate}</span><br/>'
-                                f'<span style="font-size:0.82rem;color:#60A5FA">Rec: {_srec}</span> '
-                                f'<span style="font-size:0.78rem;color:#64748B">ID: {_ssid}</span>'
-                                f'</div>',
-                                unsafe_allow_html=True,
-                            )
-                        with _r2:
-                            if st.button("Restore", key=f"sess_restore_{_ssid}",
-                                         help=f"Load session {_ssid}"):
-                                st.session_state["_piq_restore_session_id"] = _ssid
-                                st.rerun()
-                else:
-                    st.caption("No saved sessions yet. Click 'Save Full Session' to create your first checkpoint.")
-            except Exception as _le:
-                st.caption(f"Session history unavailable: {_le}")
+                            _r1, _r2 = st.columns([3, 1])
+                            with _r1:
+                                st.markdown(
+                                    f'<div style="background:#060D1A;border:1px solid rgba(148,163,184,0.1);'
+                                    f'border-radius:8px;padding:0.45rem 0.75rem;margin-bottom:0.25rem">'
+                                    f'<span style="font-weight:600;font-size:0.85rem;color:#E2E8F0">{_slabel}</span> '
+                                    f'<span style="font-size:0.78rem;color:#94A3B8">{_scat} · {_sdate}</span><br/>'
+                                    f'<span style="font-size:0.82rem;color:#60A5FA">Rec: {_srec}</span> '
+                                    f'<span style="font-size:0.78rem;color:#64748B">ID: {_ssid}</span>'
+                                    f'</div>',
+                                    unsafe_allow_html=True,
+                                )
+                            with _r2:
+                                if st.button("Restore", key=f"sess_restore_{_ssid}",
+                                             help=f"Load session {_ssid}"):
+                                    st.session_state["_piq_restore_session_id"] = _ssid
+                                    st.rerun()
+                    else:
+                        st.caption("No saved sessions yet. Click 'Save Full Session' to create your first checkpoint.")
+                except Exception as _le:
+                    st.caption(f"Session history unavailable: {_le}")
 
         st.markdown("---")
 
@@ -9652,41 +9675,49 @@ ProcureIQ uses an 8-dimension weighted scoring model based on the Kraljic matrix
                     'Use to compare past decisions, audit scoring changes, or benchmark prior awards.</p>',
                     unsafe_allow_html=True,
                 )
-                try:
-                    _db = get_database()
-                    _history = _db.get_evaluation_history(limit=20)
-                    if _history:
-                        for _ev in _history:
-                            _ev_data = _ev.get("supplier_data", [])
-                            _ev_scores = _ev.get("scores", {})
-                            _ev_rec = _ev.get("recommendation", "—")
-                            _ev_time = _ev.get("created_at", 0)
-                            try:
-                                from datetime import datetime as _dt
-                                _ev_ts = _dt.fromtimestamp(_ev_time).strftime("%Y-%m-%d %H:%M") if _ev_time else "—"
-                            except Exception:
-                                _ev_ts = "—"
-                            _n_sup = len(_ev_data)
-                            _winner = next((s["Supplier"] for s in _ev_data if s.get("Supplier")), "—") if _ev_data else "—"
+                if st.session_state.get("_piq_demo_active"):
+                    st.markdown(
+                        '<div style="background:rgba(252,211,77,0.06);border-left:3px solid #FCD34D;'
+                        'border-radius:0 6px 6px 0;padding:0.45rem 0.7rem;font-size:0.78rem;color:#FCD34D">'
+                        'Evaluation history not available in demo mode.</div>',
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    try:
+                        _db = get_database()
+                        _history = _db.get_evaluation_history(limit=20)
+                        if _history:
+                            for _ev in _history:
+                                _ev_data = _ev.get("supplier_data", [])
+                                _ev_scores = _ev.get("scores", {})
+                                _ev_rec = _ev.get("recommendation", "—")
+                                _ev_time = _ev.get("created_at", 0)
+                                try:
+                                    from datetime import datetime as _dt
+                                    _ev_ts = _dt.fromtimestamp(_ev_time).strftime("%Y-%m-%d %H:%M") if _ev_time else "—"
+                                except Exception:
+                                    _ev_ts = "—"
+                                _n_sup = len(_ev_data)
+                                _winner = next((s["Supplier"] for s in _ev_data if s.get("Supplier")), "—") if _ev_data else "—"
+                                st.markdown(
+                                    f'<div style="background:#0D1526;border:1px solid rgba(148,163,184,0.15);border-radius:8px;'
+                                    f'padding:0.6rem 1rem;margin-bottom:0.4rem;display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap">'
+                                    f'<span style="font-family:monospace;font-size:0.82rem;color:#D0E0EF">{_ev_ts}</span>'
+                                    f'<strong style="color:#60A5FA;font-size:0.85rem">{html.escape(_ev["event_id"][:32])}</strong>'
+                                    f'<span style="font-size:0.82rem;color:#C4D3E8">{_n_sup} suppliers</span>'
+                                    f'<span style="font-size:0.82rem;color:#4ADE80">Recommended: <strong>{html.escape(_winner)}</strong></span>'
+                                    f'<span style="font-size:0.75rem;color:#D0E0EF;margin-left:auto">{html.escape(_ev_rec[:60])}{"…" if len(_ev_rec) > 60 else ""}</span>'
+                                    f'</div>',
+                                    unsafe_allow_html=True,
+                                )
+                        else:
                             st.markdown(
-                                f'<div style="background:#0D1526;border:1px solid rgba(148,163,184,0.15);border-radius:8px;'
-                                f'padding:0.6rem 1rem;margin-bottom:0.4rem;display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap">'
-                                f'<span style="font-family:monospace;font-size:0.82rem;color:#D0E0EF">{_ev_ts}</span>'
-                                f'<strong style="color:#60A5FA;font-size:0.85rem">{html.escape(_ev["event_id"][:32])}</strong>'
-                                f'<span style="font-size:0.82rem;color:#C4D3E8">{_n_sup} suppliers</span>'
-                                f'<span style="font-size:0.82rem;color:#4ADE80">Recommended: <strong>{html.escape(_winner)}</strong></span>'
-                                f'<span style="font-size:0.75rem;color:#D0E0EF;margin-left:auto">{html.escape(_ev_rec[:60])}{"…" if len(_ev_rec) > 60 else ""}</span>'
-                                f'</div>',
+                                '<div style="font-size:0.92rem;color:#A8BEDC;padding:0.5rem 0">'
+                                'No prior evaluations saved yet. Complete an evaluation and the history will appear here.</div>',
                                 unsafe_allow_html=True,
                             )
-                    else:
-                        st.markdown(
-                            '<div style="font-size:0.92rem;color:#A8BEDC;padding:0.5rem 0">'
-                            'No prior evaluations saved yet. Complete an evaluation and the history will appear here.</div>',
-                            unsafe_allow_html=True,
-                        )
-                except Exception as _hist_err:
-                    st.markdown(f'<div style="font-size:0.8rem;color:#F87171">Could not load history: {html.escape(str(_hist_err))}</div>', unsafe_allow_html=True)
+                    except Exception as _hist_err:
+                        st.markdown(f'<div style="font-size:0.8rem;color:#F87171">Could not load history: {html.escape(str(_hist_err))}</div>', unsafe_allow_html=True)
 
     with tab_stakeholders:
         c1, c2 = st.columns([1.0, 1.0])
@@ -11834,7 +11865,10 @@ ProcureIQ uses an 8-dimension weighted scoring model based on the Kraljic matrix
     with tab_spend:
         # ── PORTFOLIO DASHBOARD ──────────────────────────────────────────────
         _port_db = get_database()
-        _port_events_raw = _port_db.get_portfolio_events(limit=20)
+        if st.session_state.get("_piq_demo_active"):
+            _port_events_raw = []
+        else:
+            _port_events_raw = _port_db.get_portfolio_events(limit=20)
         _port_events = [r.get("value", {}) for r in _port_events_raw if r.get("value")]
 
         st.markdown(

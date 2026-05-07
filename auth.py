@@ -1,5 +1,6 @@
 """Authentication module for ProcureIQ — demo-grade login gate."""
 import os
+import time
 import bcrypt
 import streamlit as st
 from typing import Dict, Optional
@@ -104,6 +105,21 @@ def require_authentication() -> str:
         unsafe_allow_html=True,
     )
 
+    # ── Rate limiting ────────────────────────────────────────────────
+    _RATE_MAX      = 5
+    _RATE_WINDOW   = 60  # seconds lockout after max failures
+    _rl_attempts   = st.session_state.get("_piq_login_attempts", 0)
+    _rl_locked_until = st.session_state.get("_piq_login_locked_until", 0.0)
+    _rl_now        = time.time()
+    _rl_locked     = _rl_now < _rl_locked_until
+
+    if _rl_locked:
+        _rl_remaining = int(_rl_locked_until - _rl_now)
+        st.error(
+            f"Too many failed attempts. Login locked for {_rl_remaining} more second{'s' if _rl_remaining != 1 else ''}."
+        )
+        st.stop()
+
     # Login form
     with st.form("_piq_login_form"):
         entered_user = st.text_input("Username")
@@ -117,8 +133,22 @@ def require_authentication() -> str:
             st.session_state[_SESSION_KEY] = True
             st.session_state[_SESSION_USER] = entered_user
             st.session_state[_SESSION_NAME] = user_record.get("name", entered_user)
+            st.session_state["_piq_login_attempts"]    = 0
+            st.session_state["_piq_login_locked_until"] = 0.0
             st.rerun()
         else:
-            st.error("Username or password is incorrect.")
+            _rl_attempts += 1
+            st.session_state["_piq_login_attempts"] = _rl_attempts
+            _remaining = _RATE_MAX - _rl_attempts
+            if _rl_attempts >= _RATE_MAX:
+                st.session_state["_piq_login_locked_until"] = _rl_now + _RATE_WINDOW
+                st.error(
+                    f"Too many failed attempts. Login locked for {_RATE_WINDOW} seconds."
+                )
+            else:
+                st.error(
+                    f"Username or password is incorrect. "
+                    f"{_remaining} attempt{'s' if _remaining != 1 else ''} remaining before lockout."
+                )
 
     st.stop()
