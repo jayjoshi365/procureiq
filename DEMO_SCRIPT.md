@@ -6,7 +6,7 @@ Two formats: a **2-minute video cut** for recordings and LinkedIn, and a **5-min
 
 ## 2-Minute Video Script
 
-**Setup:** Login complete, Intake already filled (HR Tech RFP, Strategic, $1.2M), 3 suppliers loaded via CSV (Workday $1.2M, SAP SuccessFactors $950K, Oracle HCM $1.1M).
+**Setup:** Click **"▶ Open Live Demo"** on the login screen. The HRIS evaluation (Workday $480K · Rippling $390K · UKG Pro $365K) loads automatically — no CSV, no API key.
 
 ---
 
@@ -35,25 +35,35 @@ Two formats: a **2-minute video cut** for recordings and LinkedIn, and a **5-min
 
 **[0:50–1:30] — Decision Brief**
 
-- Click Decision Brief tab.
-- Show the hero strip: recommended supplier, score, confidence label.
+- Click **Decision Brief** tab.
+- Show the hero strip: recommended supplier, score, confidence label, score gap, and the
+  **Executive Defensibility Score** (0–100).
+- Say: *"The Defensibility Score is a deterministic signal — no LLM — built from six components:
+  evaluation completeness, score gap, risk flags, financial data quality, stakeholder alignment,
+  and the weakest dimension floor. It tells you before the meeting how well this brief will hold
+  up under challenge."*
+- Scroll to **Why Other Suppliers Were Not Selected**. Point to the Rippling card.
+  Say: *"For each supplier not awarded, the brief shows exactly what separated them — score gap,
+  price comparison, and the single dimension with the largest deficit. This is the question
+  every CFO asks: 'Why not the cheaper one?'"*
 - Scroll to **CFO Challenge**. Read one Q&A aloud.
-- Say: *"This section pre-loads the hardest questions a CFO will ask in a sourcing committee
-  and gives structured, sourced answers. Q5 calls out if switching cost data wasn't captured
-  in intake. Q3 flags when fewer than 40% of dimensions were actively scored."*
+  Say: *"Six questions, built deterministically from evaluation data. No API key required."*
+- Scroll to **Conditions of Award**. Point to the REQUIRED items.
+  Say: *"Pre-award checklist derived live from the evaluation — HIGH risk flags, blocker presence,
+  data staleness, weak dimensions. Everything that must be resolved before the PO is issued."*
 - Scroll to **Evidence & Assumptions**. Show the 3-column table.
-- Say: *"Every data source, scoring assumption, and unvalidated input is listed here.
+  Say: *"Every data source, scoring assumption, and unvalidated input is listed here.
   This is the audit trail — it's what makes the recommendation defensible."*
 
 ---
 
 **[1:30–2:00] — Close**
 
-- Show **Export to Excel** or **Export HTML One-Pager**.
-- Say: *"The output is a CFO-ready decision brief — not a dashboard, not a report. It's the
-  document that gets approved in a sourcing committee. The scoring is a transparent weighted
-  average anyone can audit. The financial health is sourced from SEC filings. The risks are
-  flagged before the contract goes out."*
+- Show **Export HTML One-Pager**.
+- Say: *"The export includes everything — the Defensibility Score, Why Not Selected, Conditions
+  of Award, risk flags, and action plan. A CFO-ready brief, not a dashboard. The scoring is a
+  transparent weighted average anyone can audit. The financial health is sourced from SEC filings.
+  The risks are flagged before the contract goes out."*
 
 ---
 
@@ -67,13 +77,17 @@ Use for live demos, interviews, or recruiter walkthroughs. ~5 minutes at a norma
 
 ### Setup (before you start)
 
-1. Ensure `auth_config.yaml` exists (copy from `auth_config.yaml.example` if not).
-   Demo credentials: **admin / demoAdmin2025!** (or whichever you set in `auth_config.yaml`).
-2. Run `streamlit run app.py`
-3. Log in — the "Demo Login Required" disclaimer is intentional.
-4. Have a sourcing scenario ready. Recommended: **HR Tech RFP — HRIS Platform, Strategic, $1.2M**
-5. Optional: set `ANTHROPIC_API_KEY` in your environment for live LLM features.
-   Without a key, the app runs in illustrative mode (clearly labeled).
+**Option A — One-click demo (recommended, no API key needed):**
+1. Run `streamlit run app.py`
+2. On the login screen, click **"▶ Open Live Demo"**
+3. The HRIS evaluation (Workday · Rippling · UKG Pro) loads automatically.
+4. Navigate directly to the Decision Brief tab — the brief renders in one click.
+
+**Option B — Credentialed login:**
+1. Ensure `auth_config.yaml` exists. Demo credentials: **admin / demoAdmin2025!**
+2. Run `streamlit run app.py` and log in.
+3. Optionally set `ANTHROPIC_API_KEY` for live LLM features. Without a key, the app runs
+   in illustrative mode (clearly labeled).
 
 ---
 
@@ -94,16 +108,16 @@ Use for live demos, interviews, or recruiter walkthroughs. ~5 minutes at a norma
 ### Scene 2 — Intake (45 sec)
 
 **What to do:**
-- Click **Intake** tab.
-- Set:
-  - Category: **Human Resources**
-  - Subcategory: **HRIS / HCM Platform**
+- Click **Intake** tab. (In demo mode, this is pre-filled — walk through the values.)
+- Point to:
+  - Category: **Human Resources** / Subcategory: **HRIS / HCM Platform**
   - Kraljic posture: **Strategic**
   - Annual spend: **$1,200,000**
   - Event name: **HR Tech RFP 2025**
-  - Switching cost: **High — embedded workflows, data portability risk**
-- Show the Kraljic posture selector and explain:
-  *"Strategic means high business impact, few alternatives. This changes how we weight the evaluation dimensions — and it surfaces in the CFO Challenge later."*
+  - Switching cost: **High**
+- Explain the Kraljic posture selector:
+  *"Strategic means high business impact, few alternatives. This changes how we weight the
+  evaluation dimensions — and it surfaces in the CFO Challenge later."*
 
 ---
 
@@ -117,7 +131,7 @@ Use for live demos, interviews, or recruiter walkthroughs. ~5 minutes at a norma
     loads known market leaders from a curated knowledge base and labels everything illustrative —
     no fake live data."*
   - API key present: show live scoring running.
-- Show one supplier card. Highlight: Why Included, Key Differentiator, Illustrative badge if present.
+- Show one supplier card. Highlight: Why Included, Key Differentiator.
 
 **What to say:**
 > "The discovery agent categorizes suppliers into shortlist, longlist, and watchlist — the same
@@ -129,16 +143,18 @@ Use for live demos, interviews, or recruiter walkthroughs. ~5 minutes at a norma
 
 **What to do:**
 - Click **Supplier Evaluation** tab.
-- **Option A — CSV import (fastest):** Click "📥 Import Suppliers from CSV", download the template,
-  show 3 rows pre-filled (Workday / SAP / Oracle), upload, click Import. Slots populate instantly.
-- **Option B — manual:** Enter Workday $1.2M, SAP SuccessFactors $950K, Oracle HCM $1.1M.
+- In demo mode, three suppliers are pre-loaded: **Workday $480K**, **Rippling $390K**, **UKG Pro $365K**.
+  If doing a manual demo: enter these values or use CSV import (download template → fill 3 rows → upload).
 - Adjust 2–3 dimension sliders to show differentiation.
 - Point to the financial health section:
-  - For Workday and Oracle (public): EDGAR score auto-populated. Show the **freshness badge** —
-    green ≤12 months, amber 13–18, red >18. Show the "Why this score?" expander.
-  - Say: *"If the filing is stale, the Decision Brief won't render until the assessor acknowledges
+  - **Workday** (public, ticker: WDAY): EDGAR score auto-populated from SEC 10-K. Show the
+    **freshness badge** — green ≤12 months, amber 13–18, red >18. Show the "Why this score?" expander.
+    Say: *"If the filing is stale, the Decision Brief won't render until the assessor acknowledges
     the data age — that's an audit gate, not a warning they can scroll past."*
-  - For SAP (private): fill in 2–3 qualitative fields instead.
+  - **Rippling / UKG Pro** (private, no ticker): show the qualitative fields instead.
+    Say: *"For private companies, we capture qualitative signals — years in business, revenue
+    trajectory, M&A activity. The score is labeled 'User Assessment' so the CFO knows exactly
+    what it's based on."*
 - Open the **TCO Model** expander. Show benchmark defaults auto-populated from contract value —
   implementation 10%, integration 6%, switching cost 15%.
   Say: *"These are Gartner / Hackett Group benchmarks scaled to the contract value. The assessor
@@ -151,33 +167,46 @@ Use for live demos, interviews, or recruiter walkthroughs. ~5 minutes at a norma
 > comes from their SEC annual filing — not my opinion. CFOs push back on that. I'll show you how
 > the tool handles it."
 
-- Show the **Active Weights** chips. Point to ESG and Supplier Diversity dimensions.
-
 ---
 
-### Scene 5 — Decision Brief (75 sec)
+### Scene 5 — Decision Brief (90 sec)
 
 **What to do:**
 - Click **Decision Brief** tab.
-- Show the hero strip: recommended supplier, composite score, confidence label, score gap.
-- Point to the **EDGAR freshness gate** if triggered (amber/stale banner requiring acknowledgment
-  before the brief renders).
+- Show the **hero strip**: recommended supplier, composite score, confidence label, score gap,
+  and the **Executive Defensibility Score**.
+  - Say: *"The Defensibility Score is deterministic — no LLM call. Six components: evaluation
+    completeness, score gap, HIGH risk flags, EDGAR data freshness, stakeholder alignment, and
+    the weakest dimension floor. It scores the brief itself, not the supplier."*
+  - Point to the **breakdown card** below the dimension bars — each component shows earned vs max.
+- Point to the **EDGAR freshness gate** if triggered (amber/stale banner requiring acknowledgment).
+- Scroll to **Why Other Suppliers Were Not Selected**.
+  - Say: *"For each non-recommended supplier, the brief shows exactly what separated them:
+    score gap, price comparison story, and the single dimension with the largest deficit.
+    This pre-empts the 'why not the cheaper one?' question before anyone asks it."*
+  - Point to the Rippling card: UKG Pro is $115K cheaper than Workday — this section shows
+    exactly where it lost ground.
 - Scroll to **CFO Challenge**. Read one Q&A aloud — e.g.:
-  *"Why are we paying 26% more for Workday when SAP SuccessFactors covers the basics?"*
+  *"Why are we paying more for Workday when Rippling is cheaper?"*
   Then read the structured answer. Note: *"The answer cites the EDGAR period end date,
   the weakest dimension score, and the switching cost classification from intake."*
-- Show **Risk Flags** — point to a HIGH flag if present. Note the three-tier structure: HIGH / MEDIUM / LOW.
+- Show **Risk Flags** — point to a HIGH flag if present.
+- Scroll to **Conditions of Award**.
+  - Say: *"Pre-award checklist built live from the evaluation data — HIGH risk flags become
+    REQUIRED items, a blocker triggers an endorsement requirement, stale EDGAR data triggers
+    a credit check requirement. Every item is derived, not generic."*
 - Show **Evidence & Assumptions**. Point to the 3-column table: Source, What It Drives, Validation Flag.
   Say: *"This is the audit trail. Every data source and scoring assumption is listed — including
-  any dimension that was left at the default midpoint."*
-- Show **90-Day Action Plan**.
+  any dimension left at the default midpoint."*
 
 **What to say:**
 > "The CFO Challenge pre-loads the hardest questions any finance committee will ask and gives
-> structured, sourced answers. The Evidence & Assumptions section is what makes the recommendation
-> defensible to an auditor, not just an executive."
+> structured, sourced answers. Why Not Selected pre-empts the obvious objections. Conditions of
+> Award turns the risk flags into actionable requirements. The Evidence & Assumptions section is
+> what makes the recommendation defensible to an auditor, not just an executive."
 
-- Click **Export to Excel** or **Export HTML One-Pager**.
+- Click **Export HTML One-Pager**. Note: *"The export includes all of this — EDS, Why Not Selected,
+  Conditions of Award — not just the summary table."*
 
 ---
 
@@ -205,6 +234,13 @@ Use for live demos, interviews, or recruiter walkthroughs. ~5 minutes at a norma
 > requires an Anthropic (Claude) key — Claude is the only provider that supports the tool-use agents.
 > Without those keys the app runs in illustrative mode and labels everything clearly."
 
+**Q: What is the Executive Defensibility Score?**
+> "A deterministic 0–100 score that grades the brief itself — not the supplier. Six components:
+> how many dimensions were actively scored, the score gap vs the runner-up, how many HIGH risk
+> flags are present, how fresh the financial data is, whether a blocker or champion is identified,
+> and the weakest dimension floor. It tells you before the meeting whether this recommendation
+> will survive a challenge. No LLM call — pure logic from the evaluation data."
+
 **Q: Can I import existing supplier data?**
 > "Yes — CSV import in the Supplier Evaluation tab. Download the template, fill in supplier
 > names, tickers, prices, and any known financial fields, then upload. It pre-populates all slots
@@ -217,10 +253,12 @@ Use for live demos, interviews, or recruiter walkthroughs. ~5 minutes at a norma
 **Q: What's the AI doing?**
 > "The LLM handles supplier discovery (categorization, scoring rationale, risk flags) and the
 > conversational intake. The scoring engine itself is a transparent weighted average that any
-> procurement professional can audit and explain — no black box. The CFO Challenge Q&A is
-> template-driven, sourced from live evaluation state, not generated by the LLM."
+> procurement professional can audit and explain — no black box. The CFO Challenge Q&A,
+> Executive Defensibility Score, Why Not Selected, and Conditions of Award are all deterministic —
+> built from evaluation data, not generated by the LLM."
 
 **Q: What are the limitations?**
 > "SQLite backend, single-user architecture, manual data entry, and LLM outputs that require
-> human review. Sanctions screening is illustrative — not certified compliance tooling.
-> See LIMITATIONS.md for the full list. This is portfolio-grade software, not production-ready."
+> human review. Sanctions screening is not wired to the UI — use a certified OFAC process before
+> any real award. See LIMITATIONS.md for the full list. This is portfolio-grade software,
+> not production-ready."
