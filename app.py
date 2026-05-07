@@ -1291,10 +1291,12 @@ def build_executive_onepager_html(
     leader: Dict,
     runner_up: Optional[Dict],
     ranked: List[Dict],
-    risk_flags: List[str],
+    risk_flags: List[Dict],
     action_plan: List[Dict],
     category_rule: Dict,
     leader_weakest_dim: str,
+    blocker=None,
+    stake_df=None,
 ) -> str:
     """Generate a clean, print-ready HTML executive one-pager."""
     from datetime import date as _date
@@ -1306,33 +1308,145 @@ def build_executive_onepager_html(
     }
     kc = kraljic_colors.get(kraljic, "#64748B")
 
-    # Supplier rows
+    # ── Executive Defensibility Score ────────────────────────────
+    _op_gate_source = leader.get("Financial Health Source", "")
+    _op_gate_period = leader.get("EDGAR Period End", "")
+    _op_gate_age    = 0.0
+    _op_gate_needed = False
+    _op_gate_tier   = ""
+    if "EDGAR" in _op_gate_source and _op_gate_period:
+        try:
+            _op_gd = _date.fromisoformat(_op_gate_period[:10])
+            _op_gate_age = (_date.today() - _op_gd).days / 30.44
+            if _op_gate_age > 18:
+                _op_gate_needed = True
+                _op_gate_tier = "STALE"
+            elif _op_gate_age > 12:
+                _op_gate_needed = True
+                _op_gate_tier = "AMBER"
+        except Exception:
+            pass
+    _op_completeness = sum(1 for d in DIMENSIONS if leader["Scores"].get(d, 50) != 50) / len(DIMENSIONS) * 100
+    _op_high         = sum(1 for f in risk_flags if isinstance(f, dict) and f.get("tier") == "HIGH")
+    _op_gap          = round(leader["Weighted Score"] - runner_up["Weighted Score"], 1) if runner_up else None
+    _op_weakest_s    = leader["Scores"].get(leader_weakest_dim, 50)
+    _op_champion     = (stake_df is not None and not stake_df.empty
+                        and not stake_df[stake_df["Position"] == "Champion"].empty)
+    _op_eds_comp     = 20 if _op_completeness >= 80 else 15 if _op_completeness >= 60 else 10 if _op_completeness >= 40 else 5
+    _op_eds_gap      = (12 if runner_up is None else
+                        20 if _op_gap >= 10 else 15 if _op_gap >= 5 else 10 if _op_gap >= 2 else 5)
+    _op_eds_risk     = 20 if _op_high == 0 else 12 if _op_high == 1 else 5
+    _op_eds_fin      = (15 if ("EDGAR" in _op_gate_source and not _op_gate_needed) else
+                        10 if ("EDGAR" in _op_gate_source and _op_gate_tier == "AMBER") else
+                         5 if ("EDGAR" in _op_gate_source and _op_gate_tier == "STALE") else 8)
+    _op_eds_stake    = 15 if (blocker is None and _op_champion) else 10 if blocker is None else 5
+    _op_eds_weak     = (10 if _op_weakest_s >= 70 else 8 if _op_weakest_s >= 60 else
+                         6 if _op_weakest_s >= 50 else 3 if _op_weakest_s >= 40 else 1)
+    eds              = _op_eds_comp + _op_eds_gap + _op_eds_risk + _op_eds_fin + _op_eds_stake + _op_eds_weak
+    eds_label        = "Defensible" if eds >= 85 else "Solid" if eds >= 70 else "Needs Work" if eds >= 55 else "Vulnerable"
+    eds_color        = "#16A34A" if eds >= 85 else "#1D4ED8" if eds >= 70 else "#D97706" if eds >= 55 else "#DC2626"
+
+    # ── Supplier rows ─────────────────────────────────────────────
     supplier_rows = ""
     for s in ranked[:6]:
         is_rec = s["Supplier"] == leader["Supplier"]
         bg = "#EFF6FF" if is_rec else "#FFFFFF"
         supplier_rows += (
             f'<tr style="background:{bg}">'
-            f'<td style="padding:6px 10px;font-weight:{"700" if is_rec else "400"};color:#B0C4DC">'
+            f'<td style="padding:6px 10px;font-weight:{"700" if is_rec else "400"};color:{"#1E293B" if is_rec else "#475569"}">'
             f'{"★ " if is_rec else ""}{html.escape(s["Supplier"])}</td>'
-            f'<td style="padding:6px 10px;text-align:right;color:#B0C4DC">${s["Raw Price"]:,.0f}</td>'
+            f'<td style="padding:6px 10px;text-align:right;color:#475569">${s["Raw Price"]:,.0f}</td>'
             f'<td style="padding:6px 10px;text-align:right;font-weight:700;color:{"#1D4ED8" if is_rec else "#374151"}">{s["Weighted Score"]}/100</td>'
-            f'<td style="padding:6px 10px;color:#9EB8CE">{s.get("Financial Health", "—")}/100</td>'
+            f'<td style="padding:6px 10px;color:#64748B">{s.get("Financial Health", "—")}/100</td>'
             f'</tr>'
         )
 
-    # Risk flags
+    # ── Why Not Selected ──────────────────────────────────────────
+    not_selected_html = ""
+    for ns in ranked[1:]:
+        ns_gap   = round(leader["Weighted Score"] - ns["Weighted Score"], 1)
+        ns_price = ns.get("Raw Price", 0)
+        ld_price = leader.get("Raw Price", 0)
+        if ld_price and ns_price:
+            pct = round((ns_price - ld_price) / ld_price * 100, 1)
+            if pct < -2:
+                price_story = f"{abs(pct)}% cheaper (${ns_price:,.0f} vs ${ld_price:,.0f}) but scored {ns_gap} pts lower overall."
+            elif pct > 2:
+                price_story = f"{pct}% more expensive (${ns_price:,.0f}) with a lower overall score."
+            else:
+                price_story = f"Comparable price (${ns_price:,.0f}), scored {ns_gap} pts lower."
+        else:
+            price_story = f"Scored {ns_gap} pts below {leader['Supplier']}."
+        worst_dim = min(DIMENSIONS, key=lambda d: ns["Scores"].get(d, 50) - leader["Scores"].get(d, 50))
+        worst_gap = round(leader["Scores"].get(worst_dim, 50) - ns["Scores"].get(worst_dim, 50), 1)
+        not_selected_html += (
+            f'<div style="border-left:3px solid #DC2626;padding:8px 12px;margin-bottom:8px;background:#FFF5F5;border-radius:0 4px 4px 0">'
+            f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+            f'<strong style="font-size:12px">{html.escape(ns["Supplier"])}</strong>'
+            f'<span style="font-size:9px;font-weight:700;color:#DC2626;border:1px solid #FECACA;'
+            f'border-radius:3px;padding:1px 6px">NOT SELECTED</span>'
+            f'<span style="font-size:10px;color:#64748B">Score {ns["Weighted Score"]}/100 (−{ns_gap} pts)</span>'
+            f'</div>'
+            f'<div style="font-size:10px;color:#475569;margin-bottom:2px">● {html.escape(price_story)}</div>'
+            f'<div style="font-size:10px;color:#475569">● Largest gap: <strong>{html.escape(worst_dim)}</strong> '
+            f'({ns["Scores"].get(worst_dim, 50):.0f} vs {leader["Scores"].get(worst_dim, 50):.0f} — −{worst_gap:.0f} pts).</div>'
+            f'</div>'
+        )
+
+    # ── Risk flags ────────────────────────────────────────────────
+    tier_colors = {"HIGH": "#DC2626", "MEDIUM": "#D97706", "HIDDEN": "#7C3AED"}
     risk_html = ""
     for rf in risk_flags[:5]:
-        risk_html += f'<li style="margin-bottom:4px;color:#9EB8CE">{html.escape(rf)}</li>'
+        if isinstance(rf, dict):
+            tc = tier_colors.get(rf.get("tier", ""), "#1D4ED8")
+            risk_html += (
+                f'<li style="margin-bottom:6px">'
+                f'<span style="font-size:9px;font-weight:700;color:{tc}">{rf.get("tier","")} — </span>'
+                f'<strong style="font-size:11px">{html.escape(rf.get("title",""))}</strong>'
+                f'<div style="font-size:10px;color:#64748B;margin-top:1px">{html.escape(rf.get("body",""))}</div>'
+                f'</li>'
+            )
+        else:
+            risk_html += f'<li style="margin-bottom:4px;color:#64748B">{html.escape(str(rf))}</li>'
 
-    # Action plan
+    # ── Conditions of Award ───────────────────────────────────────
+    coa_items = [("REQUIRED", "Complete legal review and contract execution with qualified counsel.")]
+    for rf in risk_flags:
+        if isinstance(rf, dict) and rf.get("tier") == "HIGH":
+            coa_items.append(("REQUIRED", f"Resolve: {rf.get('title','')} — {rf.get('body','')}"))
+    if blocker is not None:
+        coa_items.append(("REQUIRED",
+            f"Secure endorsement from {blocker['Name']} ({blocker['Role']}) — current position: {blocker['Position']}."))
+    if _op_gate_needed:
+        coa_items.append(("REQUIRED",
+            f"Obtain current credit report for {leader['Supplier']} — EDGAR data is {int(_op_gate_age)}mo old."))
+    if _op_weakest_s < 55:
+        coa_items.append(("REQUIRED",
+            f"Negotiate contractual protections for {leader_weakest_dim} (scored {_op_weakest_s:.0f}/100)."))
+    if _op_gap is not None and _op_gap < 5:
+        coa_items.append(("REQUIRED",
+            f"Document narrow-gap rationale — {_op_gap} pt gap vs {runner_up['Supplier']} is within challenge range."))
+    coa_items.append(("STANDARD", f"Complete reference check with two {leader['Supplier']} enterprise customers."))
+    coa_items.append(("STANDARD", "Conduct vendor security assessment per InfoSec policy."))
+    coa_html = ""
+    for tier, text in coa_items:
+        tc = "#DC2626" if tier == "REQUIRED" else "#1D4ED8"
+        bg = "#FFF5F5" if tier == "REQUIRED" else "#EFF6FF"
+        coa_html += (
+            f'<div style="border-left:3px solid {tc};padding:6px 10px;margin-bottom:5px;'
+            f'background:{bg};border-radius:0 3px 3px 0;display:flex;gap:8px;align-items:flex-start">'
+            f'<span style="font-size:8px;font-weight:700;color:{tc};white-space:nowrap;margin-top:2px">{tier}</span>'
+            f'<span style="font-size:10px;color:#374151">{html.escape(text)}</span>'
+            f'</div>'
+        )
+
+    # ── Action plan ───────────────────────────────────────────────
     phase_colors = {"Foundation": "#1D4ED8", "Execution": "#D97706", "Optimization": "#16A34A"}
     action_html = ""
     for phase in action_plan:
         pc = phase_colors.get(phase.get("label", ""), "#64748B")
         actions_li = "".join(
-            f'<li style="margin-bottom:3px;color:#9EB8CE">{html.escape(a)}</li>'
+            f'<li style="margin-bottom:3px;color:#475569">{html.escape(a)}</li>'
             for a in phase.get("actions", [])[:4]
         )
         action_html += (
@@ -1343,17 +1457,15 @@ def build_executive_onepager_html(
             f'</div>'
         )
 
-    # RAQSCI musts
+    # ── RAQSCI ───────────────────────────────────────────────────
     raqsci_html = ""
-    raqsci_keys = ["requirements", "quality", "service", "cost"]
-    raqsci_labels = ["Requirements", "Quality", "Service", "Cost"]
-    for key, label in zip(raqsci_keys, raqsci_labels):
+    for key, label in [("requirements","Requirements"),("quality","Quality"),("service","Service"),("cost","Cost")]:
         val = category_rule.get(key, "")
         if val:
             raqsci_html += (
                 f'<div style="margin-bottom:6px">'
                 f'<span style="font-size:10px;font-weight:700;color:#1D4ED8;text-transform:uppercase">{label}: </span>'
-                f'<span style="font-size:10px;color:#9EB8CE">{html.escape(val[:120])}{"…" if len(val) > 120 else ""}</span>'
+                f'<span style="font-size:10px;color:#475569">{html.escape(val[:120])}{"…" if len(val) > 120 else ""}</span>'
                 f'</div>'
             )
 
@@ -1368,8 +1480,8 @@ def build_executive_onepager_html(
   h1 {{ font-size: 20px; color: #0F172A; margin-bottom: 2px; }}
   h2 {{ font-size: 13px; color: #1D4ED8; text-transform: uppercase; letter-spacing: 0.06em; margin: 16px 0 6px; border-bottom: 1px solid #E2E8F0; padding-bottom: 3px; }}
   .meta {{ font-size: 11px; color: #64748B; margin-bottom: 16px; }}
-  .kpis {{ display: flex; gap: 12px; margin: 12px 0; }}
-  .kpi {{ background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 10px 14px; flex: 1; }}
+  .kpis {{ display: flex; gap: 10px; margin: 12px 0; flex-wrap: wrap; }}
+  .kpi {{ background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 10px 14px; flex: 1; min-width: 100px; }}
   .kpi-label {{ font-size: 9px; color: #64748B; text-transform: uppercase; letter-spacing: 0.08em; }}
   .kpi-value {{ font-size: 18px; font-weight: 700; color: #0F172A; margin-top: 1px; }}
   .kpi-sub {{ font-size: 9px; color: #94A3B8; margin-top: 1px; }}
@@ -1410,7 +1522,12 @@ def build_executive_onepager_html(
     <div class="kpi">
       <div class="kpi-label">Financial Health</div>
       <div class="kpi-value">{leader.get("Financial Health", "—")}/100</div>
-      <div class="kpi-sub">Composite signal score</div>
+      <div class="kpi-sub">{html.escape(leader.get("Financial Health Source","User Assessment"))}</div>
+    </div>
+    <div class="kpi" style="border-top:3px solid {eds_color}">
+      <div class="kpi-label">Exec. Defensibility</div>
+      <div class="kpi-value" style="color:{eds_color}">{eds}/100</div>
+      <div class="kpi-sub" style="color:{eds_color}">{html.escape(eds_label)}</div>
     </div>
   </div>
 
@@ -1420,22 +1537,27 @@ def build_executive_onepager_html(
     <tbody>{supplier_rows}</tbody>
   </table>
 
+  {f'<h2 style="margin-top:16px">Why Not Selected</h2>{not_selected_html}' if len(ranked) > 1 else ''}
+
   <div class="two-col" style="margin-top:16px">
     <div class="col">
       <h2>90-Day Action Plan</h2>
       {action_html}
     </div>
     <div class="col">
-      <h2>Top Risk Flags</h2>
+      <h2>Live Risk Flags</h2>
       <ul style="padding-left:16px;font-size:11px">{risk_html}</ul>
       <h2 style="margin-top:12px">Contract Musts (RAQSCI)</h2>
       {raqsci_html}
     </div>
   </div>
 
+  <h2 style="margin-top:16px">Conditions of Award</h2>
+  {coa_html}
+
   <div class="footer">
     <span>ProcureIQ · Confidential · {html.escape(event_name)}</span>
-    <span>Prepared {today}</span>
+    <span>Exec. Defensibility Score: {eds}/100 ({html.escape(eds_label)}) · Prepared {today}</span>
   </div>
 </body>
 </html>"""
@@ -11257,6 +11379,7 @@ ProcureIQ uses an 8-dimension weighted scoring model based on the Kraljic matrix
                             event_name, category, selected_sub_name, kraljic,
                             leader, runner_up, ranked, _op_risk_flags, _op_action,
                             category_rule, leader_weakest_dim,
+                            blocker=blocker, stake_df=stake_df,
                         )
                         try:
                             import weasyprint as _wp
@@ -11282,6 +11405,7 @@ ProcureIQ uses an 8-dimension weighted scoring model based on the Kraljic matrix
                             event_name, category, selected_sub_name, kraljic,
                             leader, runner_up, ranked, _op_risk_flags, _op_action,
                             category_rule, leader_weakest_dim,
+                            blocker=blocker, stake_df=stake_df,
                         )
                         st.download_button(
                             label="⬇️ Download HTML",
