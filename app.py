@@ -8154,20 +8154,6 @@ ProcureIQ uses an 8-dimension weighted scoring model based on the Kraljic matrix
                                         unsafe_allow_html=True,
                                     )
 
-                    # ── Sanctions / Compliance Notice ──────────────────────
-                    if name.strip() and name.strip() != f"Supplier {i+1}":
-                        with st.expander("Sanctions & Compliance Screening", expanded=False):
-                            st.markdown(
-                                '<div style="background:rgba(252,211,77,0.08);border-left:3px solid #FCD34D;'
-                                'border-radius:0 6px 6px 0;padding:0.6rem 0.9rem;font-size:0.85rem;color:#C4D3E8">'
-                                'Certified sanctions/compliance screening requires an approved third-party compliance data provider. '
-                                'ProcureIQ does not certify compliance.'
-                                '<div style="font-size:0.78rem;color:#94A3B8;margin-top:0.4rem">'
-                                'Your compliance team must conduct and document OFAC SDN and SAM.gov debarment screening before contract award.'
-                                '</div></div>',
-                                unsafe_allow_html=True,
-                            )
-
                     # ── Conflict of Interest Disclosure ────────────────────
                     st.markdown(
                         '<div style="background:rgba(239,68,68,0.08);border-left:3px solid #EF4444;border-radius:0 4px 4px 0;'
@@ -8204,6 +8190,25 @@ ProcureIQ uses an 8-dimension weighted scoring model based on the Kraljic matrix
                             'True cost = Annual Value × Term + One-Time Costs</div>',
                             unsafe_allow_html=True,
                         )
+                        # Benchmark defaults derived from annual contract value.
+                        # Industry norms (Gartner / Hackett Group): impl 10%, integration 6%,
+                        # training 3%, admin 4% p.a., switching 15%. Zero-out if no price entered.
+                        _tco_base = max(raw_price, 0.0)
+                        _def_impl  = round(_tco_base * 0.10 / 5000) * 5000
+                        _def_intg  = round(_tco_base * 0.06 / 5000) * 5000
+                        _def_train = round(_tco_base * 0.03 / 1000) * 1000
+                        _def_admin = round(_tco_base * 0.04 / 1000) * 1000
+                        _def_exit  = round(_tco_base * 0.15 / 5000) * 5000
+                        if _tco_base > 0:
+                            st.markdown(
+                                '<div style="background:rgba(96,165,250,0.06);border-left:2px solid '
+                                'rgba(96,165,250,0.3);padding:0.4rem 0.8rem;border-radius:0 4px 4px 0;'
+                                'font-size:0.76rem;color:#94A3B8;margin-bottom:0.6rem">'
+                                'Defaults are industry benchmarks (Gartner / Hackett Group) scaled to '
+                                'the annual contract value above. Adjust to reflect actual vendor quotes '
+                                'and internal capacity costs.</div>',
+                                unsafe_allow_html=True,
+                            )
                         _tco_term = st.slider("Contract Term (years)", 1, 5, 3, key=f"tco_term_{i}")
                         from datetime import date as _date
                         _contract_start = st.date_input(
@@ -8232,20 +8237,20 @@ ProcureIQ uses an 8-dimension weighted scoring model based on the Kraljic matrix
                             help="How many consecutive renewal cycles this contract has rolled without an RFP or reverse auction.",
                         )
                         _tco_impl = st.number_input("Implementation / Onboarding ($)", min_value=0.0,
-                                                     value=0.0, step=5000.0, key=f"tco_impl_{i}",
-                                                     help="One-time cost: scoping, migration, setup, project management.")
+                                                     value=_def_impl, step=5000.0, key=f"tco_impl_{i}",
+                                                     help="One-time cost: scoping, migration, setup, project management. Benchmark: ~10% of annual contract value.")
                         _tco_intg = st.number_input("Integration / IT Cost ($)", min_value=0.0,
-                                                     value=0.0, step=5000.0, key=f"tco_intg_{i}",
-                                                     help="APIs, middleware, data pipelines, SSO, security review.")
+                                                     value=_def_intg, step=5000.0, key=f"tco_intg_{i}",
+                                                     help="APIs, middleware, data pipelines, SSO, security review. Benchmark: ~6% of annual contract value.")
                         _tco_train = st.number_input("Training & Change Management ($)", min_value=0.0,
-                                                      value=0.0, step=1000.0, key=f"tco_train_{i}",
-                                                      help="End-user training, documentation, internal change effort.")
+                                                      value=_def_train, step=1000.0, key=f"tco_train_{i}",
+                                                      help="End-user training, documentation, internal change effort. Benchmark: ~3% of annual contract value.")
                         _tco_admin = st.number_input("Annual Internal Admin Cost ($)", min_value=0.0,
-                                                      value=0.0, step=1000.0, key=f"tco_admin_{i}",
-                                                      help="Ongoing FTE time to manage this supplier relationship annually.")
+                                                      value=_def_admin, step=1000.0, key=f"tco_admin_{i}",
+                                                      help="Ongoing FTE time to manage this supplier relationship annually. Benchmark: ~4% of annual contract value.")
                         _tco_exit = st.number_input("Estimated Exit / Switching Cost ($)", min_value=0.0,
-                                                     value=0.0, step=5000.0, key=f"tco_exit_{i}",
-                                                     help="Data migration, transition support, and re-onboarding cost if you leave.")
+                                                     value=_def_exit, step=5000.0, key=f"tco_exit_{i}",
+                                                     help="Data migration, transition support, and re-onboarding cost if you leave. Benchmark: ~15% of annual contract value.")
                         _tco_total = (raw_price * _tco_term) + _tco_impl + _tco_intg + _tco_train + (_tco_admin * _tco_term) + _tco_exit
                         _tco_per_year = _tco_total / _tco_term if _tco_term > 0 else 0
                         st.session_state[f"tco_total_{i}"] = _tco_total
