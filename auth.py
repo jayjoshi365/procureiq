@@ -79,11 +79,36 @@ def require_authentication() -> str:
         unsafe_allow_html=True,
     )
 
+    # ── Live demo entry (no credentials required) ───────────
+    st.markdown(
+        '<div style="background:rgba(74,222,128,0.07);border:1px solid rgba(74,222,128,0.25);'
+        'border-radius:10px;padding:0.9rem 1.2rem;margin-bottom:1rem;text-align:center">'
+        '<div style="font-size:0.85rem;font-weight:700;color:#4ADE80;margin-bottom:0.25rem">'
+        '▶ Live Demo Available</div>'
+        '<div style="font-size:0.78rem;color:#94A3B8">'
+        'HRIS vendor evaluation — Workday vs. Rippling vs. UKG Pro — fully preloaded.<br/>'
+        'No API key required. Decision Brief renders in one click.</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    if st.button("▶ Open Live Demo", key="_piq_demo_btn", use_container_width=True, type="primary"):
+        st.session_state[_SESSION_KEY] = True
+        st.session_state[_SESSION_USER] = "demo"
+        st.session_state[_SESSION_NAME] = "Demo"
+        st.session_state["_piq_demo_active"] = True
+        st.rerun()
+
+    st.markdown(
+        '<div style="text-align:center;color:#475569;font-size:0.75rem;'
+        'margin:0.6rem 0 0.8rem 0">— or log in with credentials —</div>',
+        unsafe_allow_html=True,
+    )
+
     # Login form
     with st.form("_piq_login_form"):
         entered_user = st.text_input("Username")
         entered_pass = st.text_input("Password", type="password")
-        submitted = st.form_submit_button("Login", type="primary")
+        submitted = st.form_submit_button("Login", use_container_width=True)
 
     if submitted:
         users = config["credentials"]["usernames"]

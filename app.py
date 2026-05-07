@@ -594,9 +594,9 @@ def display_ai_governance_banner():
 
 
 def _load_hris_sample_data():
-    """Populate session state with a realistic HRIS evaluation example."""
+    """Populate session state with a realistic HRIS evaluation: Workday vs Rippling vs UKG Pro."""
     # Event settings
-    st.session_state["ctrl_event"]       = "HRIS Platform Selection — 2025"
+    st.session_state["ctrl_event"]       = "HRIS Platform Selection — FY2025"
     st.session_state["ctrl_category"]    = "HRIS / HCM Platform"
     st.session_state["ctrl_kraljic"]     = "Strategic"
     st.session_state["ctrl_suppliers"]   = 3
@@ -604,7 +604,7 @@ def _load_hris_sample_data():
     st.session_state["selected_parent_cat"] = "human_resources"
     st.session_state["selected_sub_name"]   = "HRIS / HCM Platform"
 
-    # Supplier 0 — Workday
+    # Supplier 0 — Workday (public, EDGAR-backed)
     st.session_state["name_0"]          = "Workday"
     st.session_state["raw_price_0"]     = 480000.0
     st.session_state["sla_0"]           = "Strong"
@@ -615,50 +615,102 @@ def _load_hris_sample_data():
     st.session_state["relationship_0"]  = 4
     st.session_state["flexibility_0"]   = 3
     st.session_state["esg_0"]           = "Strong"
-    st.session_state["diversity_0"]     = "Moderate"
-    st.session_state["notes_0"]         = "Strong enterprise HR suite. High implementation complexity. Premium pricing justified by automation depth."
+    st.session_state["diversity_0"]     = "Strong"
+    st.session_state["notes_0"]         = (
+        "Enterprise-grade HCM with deep automation and analytics. "
+        "Strong implementation partner ecosystem. Higher upfront cost reflects "
+        "platform depth and lower long-run switching risk."
+    )
     st.session_state["ticker_0"]        = "WDAY"
 
-    # Supplier 1 — UKG (UltiPro)
-    st.session_state["name_1"]          = "UKG Pro"
+    # Pre-cache EDGAR financial data for Workday (WDAY) — avoids live API call in demo
+    # Based on Workday FY2025 10-K: revenue growth ~17%, operating margin ~8%, debt/assets ~0.44
+    st.session_state["_edgar_fin_WDAY_0"] = {
+        "score": 78,
+        "confidence": "high",
+        "n_metrics": 3,
+        "source": "SEC EDGAR/XBRL",
+        "period_end": "2025-01-31",
+        "inputs": {
+            "Revenue Growth":  "+17.4% YoY — moderate growth",
+            "Profit Margin":   "8.1% net margin — healthy",
+            "Debt-to-Assets":  "0.44 debt/assets — moderate leverage",
+        },
+        "flags": [],
+    }
+
+    # Supplier 1 — Rippling (private — no ticker, qualitative scoring)
+    st.session_state["name_1"]          = "Rippling"
     st.session_state["raw_price_1"]     = 390000.0
     st.session_state["sla_1"]           = "Moderate"
     st.session_state["risk_1"]          = "Medium"
-    st.session_state["stake_1"]         = 3
-    st.session_state["strategic_1"]     = 4
-    st.session_state["innovation_1"]    = 3
-    st.session_state["relationship_1"]  = 4
+    st.session_state["stake_1"]         = 4
+    st.session_state["strategic_1"]     = 3
+    st.session_state["innovation_1"]    = 4
+    st.session_state["relationship_1"]  = 3
     st.session_state["flexibility_1"]   = 4
     st.session_state["esg_1"]           = "Moderate"
     st.session_state["diversity_1"]     = "Moderate"
-    st.session_state["notes_1"]         = "Strong mid-market HCM. Good payroll integration. Less enterprise-scale than Workday."
+    st.session_state["notes_1"]         = (
+        "Strong workforce platform with compelling UX and fast implementation. "
+        "Lower enterprise reference base for 5,000+ employee organizations. "
+        "Private company — financial health based on qualitative signals only."
+    )
     st.session_state["ticker_1"]        = ""
+    # Qualitative financial signals for Rippling (private)
+    st.session_state["fin_years_1"]     = "5–10"
+    st.session_state["fin_trajectory_1"] = "Growing"
+    st.session_state["fin_cash_1"]      = "Positive"
+    st.session_state["fin_debt_1"]      = "Moderate"
 
-    # Supplier 2 — SAP SuccessFactors
-    st.session_state["name_2"]          = "SAP SuccessFactors"
-    st.session_state["raw_price_2"]     = 520000.0
-    st.session_state["sla_2"]           = "Strong"
-    st.session_state["risk_2"]          = "High"
+    # Supplier 2 — UKG Pro (private — no ticker)
+    st.session_state["name_2"]          = "UKG Pro"
+    st.session_state["raw_price_2"]     = 365000.0
+    st.session_state["sla_2"]           = "Moderate"
+    st.session_state["risk_2"]          = "Medium"
     st.session_state["stake_2"]         = 3
-    st.session_state["strategic_2"]     = 4
+    st.session_state["strategic_2"]     = 3
     st.session_state["innovation_2"]    = 3
-    st.session_state["relationship_2"]  = 3
-    st.session_state["flexibility_2"]   = 2
-    st.session_state["esg_2"]           = "Strong"
+    st.session_state["relationship_2"]  = 4
+    st.session_state["flexibility_2"]   = 4
+    st.session_state["esg_2"]           = "Moderate"
     st.session_state["diversity_2"]     = "Moderate"
-    st.session_state["notes_2"]         = "Excellent if already on SAP ERP. Highest implementation risk and rigidity. Strong compliance module."
-    st.session_state["ticker_2"]        = "SAP"
+    st.session_state["notes_2"]         = (
+        "Proven mid-market HCM with strong payroll. "
+        "Lower strategic differentiation for enterprise scale. "
+        "Best fit if payroll compliance is the primary driver."
+    )
+    st.session_state["ticker_2"]        = ""
+    st.session_state["fin_years_2"]     = "10+"
+    st.session_state["fin_trajectory_2"] = "Stable"
+    st.session_state["fin_cash_2"]      = "Positive"
+    st.session_state["fin_debt_2"]      = "Low"
 
-    # Stakeholder 0 — CHRO
-    st.session_state["stake_name_0"]    = "Sarah Chen"
-    st.session_state["stake_role_0"]    = "CPO"
-    st.session_state["stake_power_0"]   = 9
+    # Stakeholders
+    st.session_state["stake_name_0"]     = "Sarah Chen"
+    st.session_state["stake_role_0"]     = "CPO"
+    st.session_state["stake_power_0"]    = 9
     st.session_state["stake_interest_0"] = 9
     st.session_state["stake_position_0"] = "Champion"
     st.session_state["stake_priority_0"] = "Quality / SLA"
 
-    st.session_state["_onboarding_shown"]      = True
-    st.session_state["_sample_data_loaded"]    = True
+    st.session_state["stake_name_1"]     = "Marcus Webb"
+    st.session_state["stake_role_1"]     = "CFO"
+    st.session_state["stake_power_1"]    = 9
+    st.session_state["stake_interest_1"] = 7
+    st.session_state["stake_position_1"] = "Skeptic"
+    st.session_state["stake_priority_1"] = "Cost / ROI"
+
+    st.session_state["stake_name_2"]     = "Dana Osei"
+    st.session_state["stake_role_2"]     = "VP Engineering"
+    st.session_state["stake_power_2"]    = 6
+    st.session_state["stake_interest_2"] = 8
+    st.session_state["stake_position_2"] = "Supporter"
+    st.session_state["stake_priority_2"] = "Integration Readiness"
+
+    st.session_state["_onboarding_shown"]   = True
+    st.session_state["_sample_data_loaded"] = True
+    st.session_state["_piq_demo_active"]    = True
 
 
 def show_onboarding_modal():
@@ -6735,8 +6787,8 @@ def render_dashboard():
                 'border-radius:10px;padding:0.8rem 1rem;margin-bottom:0.8rem;display:flex;align-items:center;gap:1rem">'
                 '<div style="flex:1">'
                 '<div style="font-size:0.75rem;color:#4ADE80;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.2rem">Try a Live Demo</div>'
-                '<div style="font-size:0.82rem;color:#CBD5E1">Load a pre-built HRIS platform selection example '
-                '(Workday vs UKG Pro vs SAP SuccessFactors) to explore ProcureIQ with real data.</div>'
+                '<div style="font-size:0.82rem;color:#CBD5E1">Load a pre-built HRIS platform selection '
+                '(Workday vs Rippling vs UKG Pro) with EDGAR-backed financial health for Workday.</div>'
                 '</div>'
                 '</div>',
                 unsafe_allow_html=True,
@@ -13869,6 +13921,28 @@ if _qp_check.get("mode") == "portal":
 
 # Require authentication
 username = require_authentication()
+
+# ── Demo mode activation ─────────────────────────────────────────────
+if st.session_state.get("_piq_demo_active") and not st.session_state.get("_sample_data_loaded"):
+    _load_hris_sample_data()
+
+if st.session_state.get("_piq_demo_active"):
+    st.markdown(
+        '<div style="background:rgba(74,222,128,0.07);border:1px solid rgba(74,222,128,0.25);'
+        'border-radius:10px;padding:0.75rem 1.1rem;margin-bottom:0.8rem;'
+        'display:flex;align-items:center;gap:1rem">'
+        '<div style="font-size:1.1rem">▶</div>'
+        '<div style="flex:1">'
+        '<div style="font-size:0.78rem;font-weight:700;color:#4ADE80;text-transform:uppercase;'
+        'letter-spacing:0.08em;margin-bottom:0.15rem">Demo Active — HRIS Platform Selection</div>'
+        '<div style="font-size:0.82rem;color:#94A3B8">'
+        'Workday · Rippling · UKG Pro — fully scored, EDGAR-backed financial health for Workday. '
+        'Navigate to the <strong style="color:#E2E8F0">Decision Brief</strong> tab to see the recommendation.'
+        '</div>'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
 if st.session_state.entered_express:
     render_express()

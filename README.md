@@ -1,18 +1,28 @@
 # ProcureIQ
 
-Procurement decision engine that scores suppliers across 10 weighted dimensions, verifies financial health from SEC EDGAR/XBRL, and produces a CFO-ready Decision Brief with structured risk flags and an auditable scoring trail.
+**ProcureIQ structures and defends enterprise sourcing decisions before supplier award.**
 
-ProcureIQ structures the pre-award sourcing process from intake through executive recommendation. Suppliers are scored across 10 weighted dimensions — price is sigmoid-normalised to prevent outlier collapse, financial health is pulled from SEC EDGAR/XBRL for public companies, and the output is a Decision Brief with CFO challenge Q&A, EDGAR freshness gating, and a 90-day execution plan. Built to demonstrate what AI-assisted procurement looks like when it's auditable, not just impressive.
+A structured evaluation record system for technology vendor selection. Score suppliers across 10 weighted dimensions, verify financial health from SEC EDGAR/XBRL, and generate a CFO-ready Decision Brief with challenge Q&A, risk flags, and a complete Evidence & Assumptions audit trail — in one click.
+
+Built to demonstrate what AI-assisted procurement looks like when it's auditable, not just impressive.
+
+---
+
+## The Problem
+
+Enterprise procurement teams spend weeks assembling sourcing recommendations that collapse in 20-minute executive meetings. The evaluation lives in a spreadsheet. The financial data is in a separate tab. The CFO questions nobody anticipated. The rationale that justified the award disappears when the procurement manager leaves.
+
+ProcureIQ fills the gap between "we need to evaluate vendors" and "we issue the PO" — the gap where sourcing decisions currently live in PowerPoint files nobody can find.
 
 ---
 
 ## What ProcureIQ Does
 
-- **Guided intake** — Captures sourcing event context (category, subcategory, Kraljic position, spend, stakeholders)
-- **Supplier evaluation** — 10-dimensional weighted scoring across Price/TCO, SLA, Execution Risk, Strategic Alignment, ESG, Supplier Diversity, and more; financial health auto-populated from SEC EDGAR/XBRL for public companies; CSV import to pre-populate up to 20 supplier slots
-- **Market intelligence** — Subcategory-specific market context; live data via Alpha Vantage and SEC EDGAR when API keys are configured
-- **Stakeholder analysis** — Power/interest mapping, position tracking, talk-track coaching per stakeholder
-- **Decision Brief** — Executive summary, CFO challenge Q&A, risk flags, 90-day action plan, confidence score, and Evidence & Assumptions audit trail
+- **Guided intake** — Captures sourcing event context: category, subcategory, Kraljic position, spend, stakeholders, switching cost, and business urgency
+- **Supplier evaluation** — 10-dimensional weighted scoring across Price/TCO, SLA, Execution Risk, Financial Health, Strategic Alignment, ESG, Supplier Diversity, and more; financial health auto-populated from SEC EDGAR/XBRL for public companies; CSV import to pre-populate up to 20 supplier slots
+- **Market intelligence** — Subcategory-specific market context; live data via SEC EDGAR and BLS PPI when configured
+- **Stakeholder analysis** — Power/interest mapping, position tracking (Champion → Blocker), likely-blocker detection, talk-track coaching per stakeholder
+- **Decision Brief** — Executive summary, CFO challenge Q&A (deterministic — no API call required), risk flags, 90-day action plan, score confidence, and Evidence & Assumptions audit trail
 - **Portfolio dashboard** — Cross-event view of saved evaluations with Kraljic distribution, category breakdown, and data provenance risk heat map
 - **Exports** — Excel and HTML one-pager for offline sharing
 
@@ -22,39 +32,44 @@ ProcureIQ structures the pre-award sourcing process from intake through executiv
 
 ### Supplier Evaluation
 - 10-dimension weighted scoring (configurable by Kraljic position and subcategory)
-- Financial health score from SEC EDGAR/XBRL for public companies; qualitative signals for private
+- Financial health score from SEC EDGAR/XBRL for public companies; qualitative signals for private companies
 - Sigmoid price normalisation (k=4) — prevents outlier collapse in competitive bids
-- CSV import to pre-populate supplier name, ticker, price, financial fields, and all 9 dimension scores (up to 20 suppliers)
-- Sensitivity analysis and confidence scoring
+- CSV import to pre-populate supplier name, ticker, price, financial fields, and all dimension scores (up to 20 suppliers)
 
-### Market Intelligence
-- 15 procurement categories, 179 subcategories with default Kraljic postures
-- Subcategory-specific evaluation weight recommendations
-- Live data integration (Alpha Vantage, SEC EDGAR, USASpending.gov, BLS PPI) when API keys are present
-- Illustrative fallback data clearly labeled when no API key is configured
+### SEC EDGAR Financial Health
+- For public companies: revenue growth, profit margin, and debt-to-assets ratio pulled from SEC EDGAR/XBRL 10-K filings
+- Freshness gate: amber badge (12–18 months old) and red gate (>18 months) require explicit acknowledgment before brief renders
+- Score labeled "SEC EDGAR/XBRL" — sourced from a primary regulatory filing, not vendor-provided data
+- Score card displays filing period date so the CFO knows exactly what period the data covers
 
 ### Stakeholder Analysis
 - Power/interest matrix
 - Position tracking (Champion, Supporter, Neutral, Skeptic, Blocker)
 - Per-stakeholder talk-track coaching
-- Likely-blocker detection
+- Likely-blocker detection and escalation guidance
 
 ### Decision Brief
 - Executive summary with Kraljic framing
-- CFO-ready challenge Q&A with EDGAR-backed financial provenance
-- EDGAR staleness gate — amber (12–18 months) and stale (>18 months) acknowledgment required before brief renders
+- CFO challenge Q&A — six questions built deterministically from evaluation data (no API key required)
 - Evidence & Assumptions section — data sources, scoring assumptions, and pre-award validation flags
 - Risk flags (HIGH / MEDIUM / LOW tiers)
 - 90-day action plan
 - Score confidence label
+- AI-assisted CFO narrative (optional, requires Anthropic API key, collapsed by default)
 
 ### Security (demo-grade)
-- **Streamlit login gate** — custom `auth.py` login form using `bcrypt.checkpw()` directly; blocks all app access; credentials in `auth_config.yaml` (gitignored); session via `st.session_state` (not cookie-based — does not persist across browser refreshes)
+- **Streamlit login gate** — custom `auth.py` login form using `bcrypt.checkpw()` directly; blocks all app access; credentials in `auth_config.yaml` (gitignored)
 - JWT authentication for the optional FastAPI layer (requires `SECRET_KEY` environment variable)
-- Password hashing via `bcrypt` directly in `auth.py`; bcrypt also available via `passlib` in `security.py` for FastAPI layer
-- Session management in SQLite (portfolio and evaluation data)
-- Audit log table (schema present; active logging requires `AuditLogger` wiring)
+- Session management in SQLite; audit log table present
 - **Not suitable for production multi-user deployment without additional hardening**
+
+---
+
+## Live Demo
+
+A preloaded HRIS vendor evaluation (Workday vs. Rippling vs. UKG Pro) is available from the login screen — no API key required. The demo loads a complete evaluation with EDGAR-backed financial health for Workday and generates the full Decision Brief in one click.
+
+Click **"▶ Open Live Demo"** on the login page.
 
 ---
 
@@ -62,16 +77,16 @@ ProcureIQ structures the pre-award sourcing process from intake through executiv
 
 ```
 ProcureIQ/
-├── app.py                    # Main Streamlit application (~13,500 lines)
+├── app.py                    # Main Streamlit application (~13,000 lines)
 ├── auth.py                   # Streamlit login gate (custom bcrypt form, no third-party auth library)
 ├── auth_config.yaml.example  # Credential template — copy to auth_config.yaml (gitignored) and fill in
 ├── database.py               # SQLite with WAL mode, session management, discovery cache
 ├── evaluation.py             # Scoring engine: weighted average, financial health, subcategory weights
-├── agents/                   # LLM-backed agents (supplier discovery, intake, sanctions stub)
+├── agents/                   # LLM-backed agents (supplier discovery, intake coaching, enrichment)
 ├── services/                 # Thin orchestration layer over agents
 ├── taxonomy.py               # 15-category, 179-subcategory procurement taxonomy
 ├── config.py                 # DIMENSIONS, Kraljic rules, scoring rubrics
-├── market_data.py            # Static market data + live API integrations
+├── market_data.py            # Static market data + live API integrations (SEC EDGAR, BLS PPI)
 ├── security.py               # Auth utilities (JWT, hashing, audit logger)
 ├── rfp.py                    # RFP question templates
 ├── utils.py                  # Helper functions
@@ -80,7 +95,7 @@ ProcureIQ/
 
 **Database:** SQLite (WAL mode). Suitable for single-user and demo use. Not suitable for concurrent multi-user production deployment.
 
-**ML/Analytics:** `evaluation.py` includes optional scikit-learn models (`RandomForestRegressor`, `MLPRegressor`) for advanced supplier performance prediction. These are supplementary — the primary scoring mechanism is a transparent weighted average that procurement professionals can audit and explain.
+**AI:** All AI agents require Claude (Anthropic). The CFO Challenge Q&A and executive summary are generated deterministically from evaluation data — no API key required for the core Decision Brief.
 
 ---
 
@@ -103,7 +118,7 @@ ProcureIQ/
    # Edit auth_config.yaml — set bcrypt-hashed passwords, then restart.
    # See auth_config.yaml.example for instructions on generating bcrypt hashes.
    ```
-   Alternatively, use environment variables (useful for hosted deployments):
+   Alternatively, use environment variables:
    ```bash
    export PROCUREIQ_DEMO_USER=demo
    export PROCUREIQ_DEMO_PASS=$(python3 -c "import bcrypt; print(bcrypt.hashpw(b'yourpassword', bcrypt.gensalt()).decode())")
@@ -129,21 +144,17 @@ ProcureIQ/
    streamlit run app.py
    ```
 
-6. **Optional: FastAPI layer** (for API access, requires `SECRET_KEY`)
-   ```bash
-   uvicorn app:app_api --host 0.0.0.0 --port 8000
-   ```
-
 ---
 
 ## Without API Keys
 
-The app is fully usable without any API keys. When no Anthropic key is configured:
-- Supplier discovery returns clearly labeled **illustrative / static data** from a curated knowledge base
-- An "AI features unavailable" banner is shown
+The app is fully usable without any API keys:
+- The preloaded HRIS demo runs entirely without an API key
 - All evaluation, scoring, stakeholder analysis, and export features work normally
+- Supplier discovery returns clearly labeled **illustrative / static data** from a curated knowledge base
+- The CFO Challenge Q&A and executive summary are generated deterministically — no API call required
 
-**Claude is required for AI agents.** The Settings panel supports alternative providers (OpenAI, DeepSeek, Grok) for basic text generation, but supplier discovery, CFO narrative generation, and all tool-use agents only work with Claude. Alternative providers are marked "LIMITED — AGENTS DISABLED" in the UI.
+**Claude is required for AI agents.** Supplier discovery, intake coaching, contract drafting, and the optional AI-assisted CFO narrative require an Anthropic API key.
 
 ---
 
@@ -160,7 +171,7 @@ python -m pytest tests/ -q
 ## What ProcureIQ Is Not
 
 - **Not an ERP connector** — No live SAP, Coupa, or Oracle integration. Spend data is entered manually or via CSV import.
-- **Not a compliance tool** — Sanctions screening is illustrative. Do not use for actual OFAC/SAM.gov screening without a certified data source.
+- **Not a compliance tool** — Sanctions screening is not performed by this tool. Before awarding any contract, screen against OFAC SDN at sanctionslistservice.ofac.treas.gov using a certified process.
 - **Not legal advice** — Recommendations, risk flags, and contract language suggestions are informational only.
 - **Not production-ready** — SQLite backend, single-process architecture, no multi-tenancy. Built for single-user use and demonstration.
 - **Not a certified AI system** — LLM outputs require human review. Financial health scores for public companies are derived from SEC EDGAR/XBRL filings; for private companies they reflect qualitative user inputs, not audited financials.
