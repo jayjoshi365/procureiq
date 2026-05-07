@@ -22,7 +22,7 @@ ProcureIQ fills the gap between "we need to evaluate vendors" and "we issue the 
 - **Supplier evaluation** — 10-dimensional weighted scoring across Price/TCO, SLA, Execution Risk, Financial Health, Strategic Alignment, ESG, Supplier Diversity, and more; financial health auto-populated from SEC EDGAR/XBRL for public companies; CSV import to pre-populate up to 20 supplier slots
 - **Market intelligence** — Subcategory-specific market context; live data via SEC EDGAR and BLS PPI when configured
 - **Stakeholder analysis** — Power/interest mapping, position tracking (Champion → Blocker), likely-blocker detection, talk-track coaching per stakeholder
-- **Decision Brief** — Executive summary, CFO challenge Q&A (deterministic — no API call required), risk flags, 90-day action plan, score confidence, and Evidence & Assumptions audit trail
+- **Decision Brief** — Executive summary, CFO challenge Q&A (deterministic — no API call required), risk flags, 90-day action plan, score confidence, Evidence & Assumptions audit trail, Why Not Selected analysis per rejected supplier, Conditions of Award checklist, and Executive Defensibility Score
 - **Portfolio dashboard** — Cross-event view of saved evaluations with Kraljic distribution, category breakdown, and data provenance risk heat map
 - **Exports** — Excel and HTML one-pager for offline sharing
 
@@ -51,6 +51,9 @@ ProcureIQ fills the gap between "we need to evaluate vendors" and "we issue the 
 ### Decision Brief
 - Executive summary with Kraljic framing
 - CFO challenge Q&A — six questions built deterministically from evaluation data (no API key required)
+- **Executive Defensibility Score** — deterministic 0–100 signal grading the brief across six components: evaluation completeness, score gap, HIGH risk flag count, financial data freshness, stakeholder alignment, and weakest dimension floor; no LLM call
+- **Why Other Suppliers Were Not Selected** — per-supplier section showing score deficit, price comparison story, and largest dimension gap vs the recommended supplier
+- **Conditions of Award** — deterministic pre-award checklist derived from HIGH risk flags, blocker presence, EDGAR staleness, weakest dimension score, and score gap; REQUIRED vs STANDARD tiers
 - Evidence & Assumptions section — data sources, scoring assumptions, and pre-award validation flags
 - Risk flags (HIGH / MEDIUM / LOW tiers)
 - 90-day action plan
@@ -77,7 +80,7 @@ Click **"▶ Open Live Demo"** on the login page.
 
 ```
 ProcureIQ/
-├── app.py                    # Main Streamlit application (~13,000 lines)
+├── app.py                    # Main Streamlit application (~14,000 lines)
 ├── auth.py                   # Streamlit login gate (custom bcrypt form, no third-party auth library)
 ├── auth_config.yaml.example  # Credential template — copy to auth_config.yaml (gitignored) and fill in
 ├── database.py               # SQLite with WAL mode, session management, discovery cache
