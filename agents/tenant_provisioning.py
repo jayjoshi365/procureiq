@@ -16,6 +16,7 @@ import re
 import json
 import time
 import sqlite3
+import hashlib
 from typing import Dict, Any, Optional
 
 try:

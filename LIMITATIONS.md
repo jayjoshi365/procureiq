@@ -87,12 +87,13 @@ and is not suitable for. Read this before using the tool for real sourcing decis
 ## Compliance Limitations
 
 ### Sanctions Screening
-- The sanctions check feature is a **stub and demonstration only**.
-- It does not perform actual OFAC SDN list screening, SAM.gov debarment checks, or any certified
-  compliance screening.
-- Do not use ProcureIQ's sanctions feature as a substitute for certified compliance tooling.
-- Before awarding a contract, perform sanctions screening using a certified data source
-  (e.g., Dow Jones Risk & Compliance, LexisNexis WorldCompliance, or an OFAC-licensed screening service).
+- ProcureIQ does not surface a sanctions screening UI. The per-supplier sanctions check has been
+  removed from the application interface.
+- The underlying `agents/sanctions_check.py` makes live HTTP calls to the OFAC Treasury SDN API
+  but is not connected to any user-facing workflow. Do not rely on it for compliance decisions.
+- Before awarding any contract, perform OFAC SDN screening at
+  sanctionslistservice.ofac.treas.gov using a certified compliance process, or via a licensed
+  screening service (e.g., Dow Jones Risk & Compliance, LexisNexis WorldCompliance).
 
 ### Not Legal Advice
 - Recommendation outputs, risk flags, negotiation playbooks, and contract language suggestions are

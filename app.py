@@ -441,53 +441,6 @@ def _render_settings_tab():
                 st.session_state["_banner_dismissed"] = False
                 st.rerun()
 
-    # ── Alternative providers (experimental, collapsed) ──────
-    with st.expander("🔬 Alternative providers (experimental — limited functionality)", expanded=False):
-        st.warning(
-            "**These providers do not support AI agents.** "
-            "Supplier discovery, CFO narrative generation, and all tool-use features require Claude. "
-            "Use an alternative provider only for basic text generation experiments.",
-            icon="⚠️",
-        )
-        for pk in [p for p in provider_keys if p != "claude"]:
-            pinfo   = _LLM_PROVIDERS[pk]
-            pd_info = _PROVIDER_DETAILS.get(pk, {})
-            is_sel  = (pk == current_provider)
-            border  = "#3B82F6" if is_sel else "rgba(148,163,184,0.15)"
-            bg      = "rgba(59,130,246,0.08)" if is_sel else "#0A1628"
-
-            c_card, c_pick = st.columns([5, 1])
-            with c_card:
-                st.markdown(
-                    f'<div style="background:{bg};border:1px solid {border};'
-                    f'border-radius:8px;padding:0.65rem 0.9rem;margin-bottom:0.3rem">'
-                    f'<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;flex-wrap:wrap">'
-                    f'<span style="font-size:1rem">{pd_info.get("icon","⚪")}</span>'
-                    f'<strong style="color:#E2E8F0;font-size:0.9rem">{pinfo["name"]}</strong>'
-                    f'<span style="font-family:monospace;font-size:0.7rem;color:#60A5FA;'
-                    f'background:rgba(96,165,250,0.1);border-radius:3px;padding:0.05rem 0.3rem">'
-                    f'{pd_info.get("cost","")}</span>'
-                    f'<span style="background:#F8717122;border:1px solid #F8717155;border-radius:4px;'
-                    f'padding:0.1rem 0.45rem;font-size:0.68rem;color:#F87171;font-weight:700;'
-                    f'letter-spacing:0.05em">LIMITED — AGENTS DISABLED</span>'
-                    f'</div>'
-                    f'<div style="font-size:0.82rem;color:#94A3B8;margin-bottom:0.2rem">{pd_info.get("desc","")}</div>'
-                    f'<div style="font-size:0.75rem;color:#64748B;margin-bottom:0.15rem">'
-                    f'Rate limits: {pd_info.get("rate_limits","")}</div>'
-                    f'<div style="font-size:0.78rem;color:#60A5FA">'
-                    f'Get your key → <strong>{pd_info.get("link","")}</strong></div>'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
-            with c_pick:
-                btn_label = "✓ Selected" if is_sel else "Select"
-                if st.button(btn_label, key=f"_pick_provider_{pk}", use_container_width=True,
-                             type="primary" if is_sel else "secondary"):
-                    if pk != current_provider:
-                        st.session_state["_user_ai_provider"] = pk
-                        st.session_state["_user_api_key"] = ""
-                        st.session_state["_banner_dismissed"] = False
-                        st.rerun()
 
     st.markdown("---")
 
@@ -4198,50 +4151,6 @@ def get_alpha_vantage_overview(ticker: str, api_key: str) -> Optional[dict]:
 # FREE PUBLIC API INTEGRATIONS
 # =========================================================
 
-# ── USASpending.gov — Federal contract awards benchmark ──
-@st.cache_data(show_spinner=False, ttl=86400)
-def fetch_usaspending_awards(keyword: str, limit: int = 10) -> list:
-    """Return recent federal contract awards matching a keyword."""
-    try:
-        url  = "https://api.usaspending.gov/api/v2/search/spending_by_award/"
-        body = {
-            "filters": {
-                "keywords": [keyword],
-                "award_type_codes": ["A", "B", "C", "D"],
-                "time_period": [{"start_date": "2022-01-01", "end_date": "2025-12-31"}],
-            },
-            "fields": ["Award ID", "Recipient Name", "Award Amount", "Description",
-                       "Action Date", "Awarding Agency Name", "Period of Performance Current End Date"],
-            "sort": "Award Amount",
-            "order": "desc",
-            "limit": limit,
-            "page": 1,
-        }
-        resp = requests.post(url, json=body, timeout=15)
-        resp.raise_for_status()
-        return resp.json().get("results", [])
-    except Exception:
-        return []
-
-
-@st.cache_data(show_spinner=False, ttl=86400)
-def fetch_usaspending_summary(keyword: str) -> dict:
-    """Return aggregate spend stats for a keyword category."""
-    try:
-        url  = "https://api.usaspending.gov/api/v2/search/spending_by_award_count/"
-        body = {
-            "filters": {
-                "keywords": [keyword],
-                "award_type_codes": ["A", "B", "C", "D"],
-                "time_period": [{"start_date": "2022-01-01", "end_date": "2025-12-31"}],
-            },
-        }
-        resp = requests.post(url, json=body, timeout=15)
-        resp.raise_for_status()
-        return resp.json()
-    except Exception:
-        return {}
-
 
 # ── BLS Producer Price Index — commodity inflation data ──
 @st.cache_data(show_spinner=False, ttl=86400)
@@ -4321,28 +4230,6 @@ WB_COMMODITY_MAP = {
     "Water / Industrial Gases":           "PCOPPUSDM.USD",
 }
 
-
-# ── USASpending category keyword map ──────────────────────
-USASPENDING_KEYWORD_MAP = {
-    "Heat Exchangers & Pressure Vessels":          "heat exchanger pressure vessel",
-    "Rotating Equipment (Pumps / Compressors / Turbines)": "pump compressor turbine",
-    "Instrumentation & Controls (I&C)":            "instrumentation control systems",
-    "Industrial Valves & Actuators":               "industrial valves actuators",
-    "Field Engineering & Turnaround Services":     "turnaround maintenance services",
-    "Inspection, Testing & NDT Services":          "nondestructive testing inspection",
-    "MRO Distribution":                            "MRO industrial supply",
-    "Cybersecurity (EDR / SIEM / SOC)":           "cybersecurity managed security",
-    "Cloud Infrastructure (AWS / Azure / GCP)":   "cloud computing infrastructure",
-    "Management Consulting":                       "management consulting advisory",
-    "IT Consulting & Systems Integration":         "systems integration IT services",
-    "Construction / Capital Projects":             "construction capital project",
-    "Truckload (TL) / Full Truckload":            "truckload transportation freight",
-    "International / Ocean Freight":              "ocean freight shipping logistics",
-    "Raw Materials (Metals / Resins / Chemicals)": "industrial chemicals raw materials",
-    "Contract Manufacturing / OEM":               "contract manufacturing OEM",
-    "Outside Counsel (Law Firm)":                 "legal services law firm",
-    "Audit Services (External)":                  "audit accounting assurance",
-}
 
 
 # =========================================================
@@ -6040,15 +5927,14 @@ def render_cover():
 
 **AI Safety**
 - All AI outputs are clearly labeled and disclaimed
-- Sanctions screening explicitly not certified as compliance
 - Contract drafts labeled as starting points requiring legal review
 - LLM output is never rendered as raw HTML
 
 **Technical Stack**
 - Python / Streamlit frontend
 - SQLite for session and evaluation persistence
-- Pluggable LLM: Claude, GPT-4o, DeepSeek, Grok
-- Live data: SEC EDGAR, BLS PPI, OFAC SDN, yfinance
+- Pluggable LLM: Claude (Anthropic)
+- Live data: SEC EDGAR, BLS PPI, yfinance
             """)
         st.markdown(
             '<div style="font-size:0.75rem;color:#64748B;margin-top:0.5rem;padding-top:0.5rem;'
@@ -6562,7 +6448,7 @@ def render_dashboard():
     if not _AGENTS_AVAILABLE:
         st.warning(
             "**AI features are unavailable** — the `agents` package is not installed. "
-            "Supplier discovery, sanctions screening, contract generation, spend analysis, "
+            "Supplier discovery, contract generation, spend analysis, "
             "and all LLM calls are disabled. "
             "Run `pip install -r requirements.txt` and restart the app to enable them.",
             icon="⚠️",
@@ -7161,7 +7047,7 @@ ProcureIQ uses an 8-dimension weighted scoring model based on the Kraljic matrix
 
 - **No independent supplier verification.** Scores are based entirely on data you enter. The tool cannot confirm whether a supplier's stated capabilities are accurate.
 - **No live pricing data.** Quoted prices are manually entered. Market benchmark pricing is sourced from BLS PPI indices and ISM estimates — directional only.
-- **Sanctions screening is not a compliance certification.** The OFAC name match uses the Treasury SDN list at the time of query. A no-match result does not replace a formal compliance review.
+- **Sanctions screening is not performed by this tool.** Before awarding any contract, complete OFAC SDN screening at sanctionslistservice.ofac.treas.gov using a certified compliance process. ProcureIQ does not perform or certify compliance screening.
 - **Financial health scores are estimates.** Calculated from qualitative fields you enter; not from audited financials or credit bureau data.
 - **AI-generated text requires review.** All negotiation prompts, strategy text, and briefing content must be reviewed by a qualified procurement professional before use.
 - **Not a contract management system.** Renewal alerts are based on contract dates you enter; the tool does not integrate with your ERP, CLM, or P2P system.
@@ -8194,11 +8080,11 @@ ProcureIQ uses an 8-dimension weighted scoring model based on the Kraljic matrix
                         # Industry norms (Gartner / Hackett Group): impl 10%, integration 6%,
                         # training 3%, admin 4% p.a., switching 15%. Zero-out if no price entered.
                         _tco_base = max(raw_price, 0.0)
-                        _def_impl  = round(_tco_base * 0.10 / 5000) * 5000
-                        _def_intg  = round(_tco_base * 0.06 / 5000) * 5000
-                        _def_train = round(_tco_base * 0.03 / 1000) * 1000
-                        _def_admin = round(_tco_base * 0.04 / 1000) * 1000
-                        _def_exit  = round(_tco_base * 0.15 / 5000) * 5000
+                        _def_impl  = float(round(_tco_base * 0.10 / 5000) * 5000)
+                        _def_intg  = float(round(_tco_base * 0.06 / 5000) * 5000)
+                        _def_train = float(round(_tco_base * 0.03 / 1000) * 1000)
+                        _def_admin = float(round(_tco_base * 0.04 / 1000) * 1000)
+                        _def_exit  = float(round(_tco_base * 0.15 / 5000) * 5000)
                         if _tco_base > 0:
                             st.markdown(
                                 '<div style="background:rgba(96,165,250,0.06);border-left:2px solid '
@@ -12453,78 +12339,6 @@ ProcureIQ uses an 8-dimension weighted scoring model based on the Kraljic matrix
                 key="spend_sample_dl",
             )
 
-        # ── USASpending.gov Federal Benchmark ─────────────────
-        st.markdown("---")
-        st.markdown("#### Federal Contract Benchmark — USASpending.gov")
-        st.markdown(
-            '<p class="muted">Real federal government contract awards for this category. '
-            'Use these as market-rate benchmarks and supplier discovery signals. '
-            'Data sourced live from USASpending.gov — the official US federal spend database.</p>',
-            unsafe_allow_html=True,
-        )
-        _usa_keyword = USASPENDING_KEYWORD_MAP.get(
-            selected_sub_name,
-            selected_sub_name.split("(")[0].strip()[:40]
-        )
-        _usa_col1, _usa_col2 = st.columns([3, 1])
-        with _usa_col2:
-            _usa_custom = st.text_input(
-                "Search keyword (optional)",
-                value=_usa_keyword,
-                key="usa_keyword_override",
-                help="Override the auto-detected keyword for this category.",
-            )
-        _kw_to_use = _usa_custom.strip() if _usa_custom.strip() else _usa_keyword
-        with _usa_col1:
-            st.markdown(
-                f'<div style="font-size:0.85rem;color:#C4D3E8;padding:0.6rem 0">'
-                f'Searching: <strong style="color:#60A5FA">"{html.escape(_kw_to_use)}"</strong> · '
-                f'Federal awards 2022–2025</div>',
-                unsafe_allow_html=True,
-            )
-
-        if st.button("Pull Federal Benchmarks", key="usa_fetch", type="primary"):
-            with st.spinner("Querying USASpending.gov..."):
-                _usa_awards = fetch_usaspending_awards(_kw_to_use, limit=8)
-            if _usa_awards:
-                _total_usa = sum(float(a.get("Award Amount") or 0) for a in _usa_awards)
-                st.markdown(
-                    f'<div style="background:rgba(96,165,250,0.06);border:1px solid rgba(96,165,250,0.15);'
-                    f'border-radius:10px;padding:0.8rem 1.2rem;margin-bottom:1rem">'
-                    f'<div style="font-size:0.80rem;color:#60A5FA;text-transform:uppercase;letter-spacing:0.1em">Top {len(_usa_awards)} Federal Awards Found</div>'
-                    f'<div style="font-size:1.3rem;font-weight:700;color:#F1F5F9">'
-                    f'${_total_usa:,.0f} combined · avg ${_total_usa/len(_usa_awards):,.0f}</div>'
-                    f'<div style="font-size:0.82rem;color:#A8BEDC">Use these award amounts as your market rate upper bound. '
-                    f'Federal contracts often carry 10-20% premium over commercial pricing.</div>'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
-                for _aw in _usa_awards:
-                    _aw_amt = float(_aw.get("Award Amount") or 0)
-                    _aw_rec = str(_aw.get("Recipient Name") or "Unknown")
-                    _aw_desc = str(_aw.get("Description") or "")[:120]
-                    _aw_agency = str(_aw.get("Awarding Agency Name") or "")
-                    _aw_date = str(_aw.get("Action Date") or "")
-                    st.markdown(
-                        f'<div style="background:rgba(13,21,38,0.7);border:1px solid rgba(96,165,250,0.10);'
-                        f'border-radius:8px;padding:0.65rem 1rem;margin-bottom:0.4rem;'
-                        f'display:flex;justify-content:space-between;align-items:flex-start;gap:1rem">'
-                        f'<div style="flex:1;min-width:0">'
-                        f'<div style="font-weight:600;color:#E2E8F0;font-size:0.88rem">{html.escape(_aw_rec)}</div>'
-                        f'<div style="font-size:0.80rem;color:#A8BEDC;margin-top:0.1rem">{html.escape(_aw_desc)}</div>'
-                        f'<div style="font-size:0.75rem;color:#8BAAC4;margin-top:0.1rem">'
-                        f'{html.escape(_aw_agency)} · {html.escape(_aw_date)}</div>'
-                        f'</div>'
-                        f'<div style="font-weight:700;color:#4ADE80;font-family:monospace;'
-                        f'font-size:0.92rem;white-space:nowrap">${_aw_amt:,.0f}</div>'
-                        f'</div>',
-                        unsafe_allow_html=True,
-                    )
-            else:
-                st.info(
-                    "No federal awards found for this keyword. "
-                    "Try a broader search term — e.g. 'maintenance services' instead of a specific subcategory name."
-                )
 
     # end with main_col
 
