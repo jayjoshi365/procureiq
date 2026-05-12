@@ -14,10 +14,20 @@ _SESSION_NAME = "_piq_name"
 
 
 def _load_config(config_file: str = "auth_config.yaml") -> Optional[Dict]:
-    """Load credentials from auth_config.yaml or env vars."""
+    """Load credentials from auth_config.yaml, Streamlit secrets, or env vars."""
     if Path(config_file).exists():
         with open(config_file, "r") as f:
             return yaml.safe_load(f)
+
+    # Streamlit Cloud: credentials stored in app secrets (TOML)
+    try:
+        if hasattr(st, "secrets") and "credentials" in st.secrets:
+            cfg: Dict = {"credentials": st.secrets["credentials"].to_dict()}
+            if "cookie" in st.secrets:
+                cfg["cookie"] = st.secrets["cookie"].to_dict()
+            return cfg
+    except Exception:
+        pass
 
     demo_user = os.getenv("PROCUREIQ_DEMO_USER", "").strip()
     demo_pass = os.getenv("PROCUREIQ_DEMO_PASS", "").strip()
