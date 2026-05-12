@@ -21,11 +21,27 @@ def _load_config(config_file: str = "auth_config.yaml") -> Optional[Dict]:
 
     # Streamlit Cloud: credentials stored in app secrets (TOML)
     try:
-        if hasattr(st, "secrets") and "credentials" in st.secrets:
-            cfg: Dict = {"credentials": st.secrets["credentials"].to_dict()}
-            if "cookie" in st.secrets:
-                cfg["cookie"] = st.secrets["cookie"].to_dict()
-            return cfg
+        _secrets = getattr(st, "secrets", {})
+        if "credentials" in _secrets:
+            _raw_users = _secrets["credentials"].get("usernames", {})
+            _usernames: Dict = {}
+            for _uname in _raw_users:
+                _u = _raw_users[_uname]
+                _usernames[_uname] = {
+                    "email":    _u.get("email", ""),
+                    "name":     _u.get("name", _uname),
+                    "password": _u.get("password", ""),
+                }
+            if _usernames:
+                _raw_cookie = _secrets.get("cookie", {})
+                return {
+                    "credentials": {"usernames": _usernames},
+                    "cookie": {
+                        "name":        _raw_cookie.get("name", "procureiq_auth"),
+                        "key":         _raw_cookie.get("key", "procureiq_secret_key_2024"),
+                        "expiry_days": int(_raw_cookie.get("expiry_days", 30)),
+                    },
+                }
     except Exception:
         pass
 
