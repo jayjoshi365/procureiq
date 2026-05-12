@@ -98,17 +98,19 @@ class SecurityManager:
         return api_key
 
     def validate_api_key(self, api_key: str) -> Optional[Dict]:
-        """Validate API key and return user information."""
+        """Validate API key and return user information.
+
+        NOT IMPLEMENTED — requires a database lookup against a stored,
+        hashed key table before this class can be used in a deployed
+        FastAPI endpoint. Do not enable the FastAPI auth layer until
+        this method performs a real lookup.
+        """
         if not api_key.startswith("pq_"):
             return None
-
-        # In production, you would look up the API key in a database
-        # For now, return mock validation
-        return {
-            "user_id": "demo_user",
-            "scopes": ["read", "write"],
-            "valid": True
-        }
+        raise NotImplementedError(
+            "validate_api_key requires a database lookup. "
+            "Implement key storage and hashed comparison before deploying."
+        )
 
 class MFAManager:
     """Multi-Factor Authentication manager using TOTP."""

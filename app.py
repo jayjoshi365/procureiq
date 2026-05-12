@@ -1345,6 +1345,17 @@ def build_executive_onepager_html(
     eds              = _op_eds_comp + _op_eds_gap + _op_eds_risk + _op_eds_fin + _op_eds_stake + _op_eds_weak
     eds_label        = "Defensible" if eds >= 85 else "Solid" if eds >= 70 else "Needs Work" if eds >= 55 else "Vulnerable"
     eds_color        = "#16A34A" if eds >= 85 else "#1D4ED8" if eds >= 70 else "#D97706" if eds >= 55 else "#DC2626"
+    eds_breakdown_html = (
+        f'<div style="font-size:9px;color:#94A3B8;margin:-4px 0 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+        f'<span style="font-weight:600;color:#374151">EDS:</span>'
+        f'<span>Completeness&nbsp;{_op_eds_comp}/20</span><span>·</span>'
+        f'<span>Score&nbsp;Gap&nbsp;{_op_eds_gap}/20</span><span>·</span>'
+        f'<span>Risk&nbsp;{_op_eds_risk}/20</span><span>·</span>'
+        f'<span>Fin.&nbsp;Quality&nbsp;{_op_eds_fin}/15</span><span>·</span>'
+        f'<span>Stakeholder&nbsp;{_op_eds_stake}/15</span><span>·</span>'
+        f'<span>Weakest&nbsp;Dim&nbsp;{_op_eds_weak}/10</span>'
+        f'</div>'
+    )
 
     # ── Supplier rows ─────────────────────────────────────────────
     supplier_rows = ""
@@ -1530,6 +1541,7 @@ def build_executive_onepager_html(
       <div class="kpi-sub" style="color:{eds_color}">{html.escape(eds_label)}</div>
     </div>
   </div>
+  {eds_breakdown_html}
 
   <h2>Supplier Ranking</h2>
   <table>

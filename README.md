@@ -6,6 +6,8 @@ A structured evaluation record system for technology vendor selection. Score sup
 
 Built to demonstrate what AI-assisted procurement looks like when it's auditable, not just impressive.
 
+Includes `CLAUDE.md` — an AI collaboration governance layer that enforced product discipline, anti-overengineering rules, and enterprise procurement grounding throughout development.
+
 ---
 
 ## The Problem
